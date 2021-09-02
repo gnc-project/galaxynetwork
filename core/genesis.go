@@ -37,6 +37,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/ethereum/go-ethereum/rewardc"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -62,6 +63,7 @@ type Genesis struct {
 	Number     uint64      `json:"number"`
 	GasUsed    uint64      `json:"gasUsed"`
 	ParentHash common.Hash `json:"parentHash"`
+	NetCapacity uint64   `json:"netCapacity"`
 	BaseFee    *big.Int    `json:"baseFeePerGas"`
 }
 
@@ -353,11 +355,15 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.MainnetChainConfig,
-		Nonce:      66,
+		Timestamp:  rewardc.GenesisTimestamp,
+		Nonce:      8888888888,
 		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
-		GasLimit:   5000,
-		Difficulty: big.NewInt(17179869184),
+		GasLimit:   16777216,
+		Difficulty: new(big.Int).SetUint64(rewardc.GenesisDifficulty),
 		Alloc:      decodePrealloc(mainnetAllocData),
+		NetCapacity:  0,
+		//poc
+		// Challenge: common.HexToHash("0x66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"),
 	}
 }
 

@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strings"
+	"encoding/hex"
 
 	"github.com/ethereum/go-ethereum/common"
 	cmath "github.com/ethereum/go-ethereum/common/math"
@@ -83,6 +85,7 @@ type Message interface {
 // message no matter the execution itself is successful or not.
 type ExecutionResult struct {
 	UsedGas    uint64 // Total used gas but include the refunded gas
+	Capacity   *big.Int // Total increased capacity
 	Err        error  // Any error encountered during the execution(listed in core/vm/errors.go)
 	ReturnData []byte // Returned data from evm(function result or data supplied with revert opcode)
 }
@@ -302,8 +305,36 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	st.gas -= gas
 
 	// Check clause 6
-	if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.From(), msg.Value()) {
-		return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
+	var snapdata []byte
+	if msg.Data()==nil{
+		snapdata=[]byte{}
+	}else{
+		snapdata=msg.Data()
+	}
+
+	// Check clause 6
+	//new gnc
+	if len(snapdata)>6{
+		if msg.Value().Sign() > 0 &&!strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("redeem")))&&strings.EqualFold(hex.EncodeToString(snapdata),hex.EncodeToString([]byte("unlockStaking")))&&!st.evm.Context.CanTransfer(st.state, msg.From(),msg.Value()) {
+			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
+		}else{
+			if strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("redeem")))&&!st.evm.Context.CanRedeem(st.state, msg.From(), msg.Value(),st.evm.Context.BlockNumber) {
+				return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForPledge, msg.From().Hex())
+			}
+		}
+    }else{
+		if msg.Value().Sign() > 0 &&!st.evm.Context.CanTransfer(st.state, msg.From(),msg.Value()) {
+			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
+		}
+	}
+	
+
+	if strings.EqualFold(hex.EncodeToString(snapdata),hex.EncodeToString([]byte("unlockStaking"))){
+		unlockValue:=st.evm.StateDB.GetUnlockStakingValue(msg.From(),st.evm.Context.BlockNumber.Uint64())
+
+		if unlockValue.Cmp(msg.Value())!=0{
+			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForPledge, msg.From().Hex())
+		}
 	}
 
 	// Set up the initial access list.
@@ -313,13 +344,15 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	var (
 		ret   []byte
 		vmerr error // vm errors do not effect consensus and are therefore not assigned to err
+		capacity=big.NewInt(0)
 	)
 	if contractCreation {
 		ret, _, st.gas, vmerr = st.evm.Create(sender, st.data, st.gas, st.value)
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
-		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
+		ret, st.gas,capacity, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
+
 	}
 
 	if !london {
@@ -337,6 +370,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 	return &ExecutionResult{
 		UsedGas:    st.gasUsed(),
+		Capacity:   capacity,
 		Err:        vmerr,
 		ReturnData: ret,
 	}, nil

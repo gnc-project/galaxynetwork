@@ -18,12 +18,18 @@ package core
 
 import (
 	"fmt"
+	"encoding/hex"
+	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/rewardc"
+
 )
 
 // BlockValidator is responsible for validating block headers, uncles and
@@ -70,6 +76,49 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 			return consensus.ErrUnknownAncestor
 		}
 		return consensus.ErrPrunedAncestor
+	}
+	transactions := block.Transactions()
+	if len(transactions) > 0 {
+		for i := 0; i < len(transactions); i++ {
+			msg, err := transactions[i].AsMessage(types.NewEIP155Signer(v.config.ChainID), nil)
+			if err != nil {
+				return fmt.Errorf("getFromErr :%v", err)
+			}
+			var snapdata []byte
+			if msg.Data() == nil {
+				snapdata = []byte{}
+			} else {
+				snapdata = msg.Data()
+			}
+			if len(snapdata) > 6 && strings.EqualFold(hex.EncodeToString(snapdata[:6]), hex.EncodeToString([]byte("pledge"))) {
+
+				pidData := hexutil.SlitData(snapdata)
+				
+				currentNetCapacity:=v.bc.GetBlockByHash(block.ParentHash()).NetCapacity()/1048576
+				switch{
+				case currentNetCapacity<100:
+					currentNetCapacity=1
+				case 100<=currentNetCapacity&&currentNetCapacity<2000:
+					currentNetCapacity=currentNetCapacity/100
+				case 2000<=currentNetCapacity&&currentNetCapacity<10000:
+					currentNetCapacity=currentNetCapacity/1000*10
+				case 10000<=currentNetCapacity&&currentNetCapacity<30000:
+					currentNetCapacity=currentNetCapacity/10000*100
+				default :
+				    currentNetCapacity=300
+				}
+
+				pledgeValue := new(big.Int).Mul(new(big.Int).SetInt64(int64(len(pidData))), new(big.Int).Div(rewardc.PledgeBase[currentNetCapacity*100],big.NewInt(10)))
+				if msg.Value().Cmp(pledgeValue) < 0 {
+					return fmt.Errorf("invalid pledge tx value (remote: %v local: %v)", msg.Value(), pledgeValue)
+				}
+			}
+			if len(snapdata) > 7&&strings.EqualFold(hex.EncodeToString(snapdata[:7]), hex.EncodeToString([]byte("staking"))){
+				if msg.Value().Cmp(rewardc.StakingLowerLimit)<0{
+					return ErrInsufficientStakingValue
+				}
+			}
+		}
 	}
 	return nil
 }

@@ -43,10 +43,49 @@ const (
 var (
 	hashT    = reflect.TypeOf(Hash{})
 	addressT = reflect.TypeOf(Address{})
+	AllStakingDB=HexToAddress("0x513fC36B30cD39e4F287B5633f8c5D0fa67E084C")
+
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
 type Hash [HashLength]byte
+
+type Staking struct{
+	Address  *Address
+	TotalValue    *big.Int
+	TotalWeight   *big.Int
+
+	StakingInfo []struct{
+					Value        *big.Int
+	                Weight       *big.Int
+					StopBlock    uint64
+					StartBlock   uint64
+				}
+}
+
+type Pid struct {
+	PidHex string
+	PledgeAmount *big.Int
+}
+
+type CanRedeem struct {
+	UnlockBlock  uint64
+	RedeemAmount *big.Int
+}
+
+type CanRedeemList []*CanRedeem
+
+type PidList    []*Pid
+type StakingList []*Staking
+func (S StakingList) Len() int {
+	return len(S)
+}
+func (S StakingList) Less(i, j int) bool {
+	return S[i].TotalWeight.Cmp(S[j].TotalWeight)>0
+}
+func (S StakingList) Swap(i, j int) {
+	S[i], S[j] = S[j], S[i]
+}
 
 // BytesToHash sets b to hash.
 // If b is larger than len(h), b will be cropped from the left.

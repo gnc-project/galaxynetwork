@@ -23,6 +23,8 @@ import (
 	"math/big"
 	"sync"
 	"time"
+	"strings"
+	"encoding/hex"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -504,10 +506,23 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call ethereum.CallMs
 		balance := b.pendingState.GetBalance(call.From) // from can't be nil
 		available := new(big.Int).Set(balance)
 		if call.Value != nil {
-			if call.Value.Cmp(available) >= 0 {
-				return 0, errors.New("insufficient funds for transfer")
+			if len(call.Data)>6{
+				if !strings.EqualFold(hex.EncodeToString(call.Data[:6]),hex.EncodeToString([]byte("redeem"))){
+					if call.Value.Cmp(available) >= 0 {
+						return 0, errors.New("insufficient funds for transfer")
+					  }
+					  available.Sub(available, call.Value)
+				   }else{
+					   if call.Value.Cmp(b.pendingState.GetRedeemAmount(call.From,b.blockchain.CurrentBlock().Number().Uint64())) >= 0 {
+						   return 0, errors.New("insufficient funds for redeem")
+						 }
+				   }	
+			}else{
+				if call.Value.Cmp(available) >= 0 {
+					return 0, errors.New("insufficient funds for transfer")
+				  }
+				  available.Sub(available, call.Value)
 			}
-			available.Sub(available, call.Value)
 		}
 		allowance := new(big.Int).Div(available, feeCap)
 		if allowance.IsUint64() && hi > allowance.Uint64() {

@@ -31,6 +31,31 @@ type StateDB interface {
 	AddBalance(common.Address, *big.Int)
 	GetBalance(common.Address) *big.Int
 
+	SubPledge(common.Address, *big.Int)
+	AddPledge(common.Address, *big.Int)
+	GetAllPledgeAmount(common.Address) *big.Int
+	GetRedeemAmount(common.Address,uint64) *big.Int
+
+	SubTotalLockedFunds(addr common.Address, amount *big.Int)
+	GetTotalLockedFunds(addr common.Address) *big.Int
+    SetFunds(addr common.Address, funds []struct {
+		BlockNumber *big.Int 
+		Amount      *big.Int})
+
+	AddCanRedeem(addr common.Address, number uint64,amount *big.Int)
+	SubCanRedeem(addr common.Address,index int64)
+	GetCanRedeem(addr common.Address) common.CanRedeemList 
+	
+	GetUnlockStakingValue(addr common.Address,number uint64) *big.Int
+
+	AddStakingList(addr common.Address,stakingList *common.Staking)
+	SubStakingList(addr common.Address,number uint64)
+
+    
+	AddPid(addr common.Address, pidHex []byte,amount *big.Int)
+	SubPid(addr common.Address,pidHex []byte)(*big.Int)
+	GetPid(addr common.Address) common.PidList
+
 	GetNonce(common.Address) uint64
 	SetNonce(common.Address, uint64)
 

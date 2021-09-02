@@ -606,10 +606,19 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 		}
 		// Retrieve the current account and flatten it into the internal format
 		var acc struct {
-			Nonce    uint64
-			Balance  *big.Int
-			Root     common.Hash
-			CodeHash []byte
+			Nonce            uint64
+			Balance          *big.Int
+			Root             common.Hash
+			CodeHash         []byte
+			TotalLockedFunds *big.Int
+			Pledge           *big.Int
+			CanRedeem     common.CanRedeemList
+			Funds            []struct {
+				BlockNumber *big.Int
+				Amount      *big.Int
+			}
+			Pid           common.PidList
+	        Staking       common.StakingList
 		}
 		if err := rlp.DecodeBytes(val, &acc); err != nil {
 			log.Crit("Invalid account encountered during snapshot creation", "err", err)
@@ -626,7 +635,7 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 				}
 				snapRecoveredAccountMeter.Mark(1)
 			} else {
-				data := SlimAccountRLP(acc.Nonce, acc.Balance, acc.Root, acc.CodeHash)
+				data := SlimAccountRLP(acc.Nonce, acc.Balance, acc.Root, acc.CodeHash, acc.TotalLockedFunds, acc.Pledge, acc.Funds, acc.Pid,acc.Staking,acc.CanRedeem)
 				dataLen = len(data)
 				rawdb.WriteAccountSnapshot(batch, accountHash, data)
 				snapGeneratedAccountMeter.Mark(1)

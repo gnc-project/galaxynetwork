@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"runtime"
 	"time"
+	"sort"
 
 	mapset "github.com/deckarep/golang-set"
 	"github.com/ethereum/go-ethereum/common"
@@ -34,6 +35,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/ethereum/go-ethereum/rewardc"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -588,7 +590,8 @@ func (ethash *Ethash) Prepare(chain consensus.ChainHeaderReader, header *types.H
 // setting the final state on the header
 func (ethash *Ethash) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header) {
 	// Accumulate any block and uncle rewards and commit the final state root
-	accumulateRewards(chain.Config(), state, header, uncles)
+	
+	accumulateRewards(chain, state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 }
 
@@ -638,31 +641,137 @@ var (
 // AccumulateRewards credits the coinbase of the given block with the mining
 // reward. The total reward consists of the static block reward and rewards for
 // included uncles. The coinbase of each uncle block is also rewarded.
-func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
+func accumulateRewards(chain consensus.ChainHeaderReader, state *state.StateDB, header *types.Header, uncles []*types.Header) {
 	// Skip block reward in catalyst mode
-	if config.IsCatalyst(header.Number) {
+	if chain.Config().IsCatalyst(header.Number) {
 		return
 	}
-	// Select the correct block reward based on chain progression
-	blockReward := FrontierBlockReward
-	if config.IsByzantium(header.Number) {
-		blockReward = ByzantiumBlockReward
-	}
-	if config.IsConstantinople(header.Number) {
-		blockReward = ConstantinopleBlockReward
-	}
-	// Accumulate the rewards for the miner and any included uncles
-	reward := new(big.Int).Set(blockReward)
-	r := new(big.Int)
-	for _, uncle := range uncles {
-		r.Add(uncle.Number, big8)
-		r.Sub(r, header.Number)
-		r.Mul(r, blockReward)
-		r.Div(r, big8)
-		state.AddBalance(uncle.Coinbase, r)
+	reward := rewardc.GetReward(header.Number.Uint64())
 
-		r.Div(blockReward, big32)
-		reward.Add(reward, r)
+	rewardToLock, available, lockedRewardVestingSpec := LockedRewardFromReward(new(big.Int).Mul(new(big.Int).Div(reward,big.NewInt(100)),rewardc.MineRewardProportion))
+
+	amountUnlocked := SetLockedFunds(rewardToLock, lockedRewardVestingSpec, state, header.Coinbase, header.Number)
+
+	// Accumulate the rewards for the miner and any included uncles
+	for _, uncle := range uncles {
+		state.AddBalance(uncle.Coinbase, big.NewInt(0))
 	}
-	state.AddBalance(header.Coinbase, reward)
+	state.AddBalance(header.Coinbase, new(big.Int).Add(available, amountUnlocked))
+    
+	stakingList:=state.GetAllStakingList()
+    var index int
+	if len(stakingList)<50{
+        index=len(stakingList)
+	}else{
+		index=50
+	}
+    var allWeight=big.NewInt(0)
+	for i:=0;i<index;i++{
+		allWeight=new(big.Int).Add(allWeight,stakingList[i].TotalWeight)
+	}
+	for i:=0;i<index;i++{
+		address:=stakingList[i].Address
+		stakingReward:=	new(big.Int).Mul(new(big.Int).Div(reward,big.NewInt(100)),rewardc.StakingRewardProportion)	
+	    state.AddBalance(*address,new(big.Int).Div(new(big.Int).Mul(stakingReward,stakingList[i].TotalWeight),allWeight))
+	}
+}
+
+
+var (
+	LockedRewardFactorNum   = big.NewInt(75)
+	LockedRewardFactorDenom = big.NewInt(100)
+)
+
+type VestingFund struct {
+	Epoch  int64
+	Amount *big.Int
+}
+
+type VestSpec struct {
+	MinExpiration int64
+	VestPeriod    int64
+	StepDuration  int64
+}
+
+var RewardVestingSpec = VestSpec{
+	MinExpiration: rewardc.MinSectorExpiration,
+	VestPeriod:    int64(rewardc.MinSectorExpiration * rewardc.DayBlock),
+	StepDuration:  int64(1 * rewardc.DayBlock),
+}
+
+//Calculate and lock 75% of coins
+func LockedRewardFromReward(reward *big.Int) (*big.Int, *big.Int, *VestSpec) {
+	spec := &RewardVestingSpec
+	lockAmount := big.NewInt(0).Div(big.NewInt(0).Mul(reward, LockedRewardFactorNum), LockedRewardFactorDenom)
+	return lockAmount, big.NewInt(0).Sub(reward, lockAmount), spec
+}
+
+//Add locked coins
+func SetLockedFunds(vestingSum *big.Int, spec *VestSpec, self *state.StateDB, coinbase common.Address, number *big.Int) (vested *big.Int) {
+	if vestingSum.Cmp(Zero()) < 0 {
+		return Zero()
+	}
+
+	//Calculate unlocked coins
+
+	amountUnlocked := self.UnlockVestedFunds(number, coinbase)
+	lockedFunds := self.GetTotalLockedFunds(coinbase)
+
+	if new(big.Int).Sub(lockedFunds, amountUnlocked).Cmp(Zero()) < 0 {
+		return Zero()
+	}
+
+	self.SubTotalLockedFunds(coinbase, amountUnlocked)
+
+	addLockedFunds(number, vestingSum, spec, self, coinbase)
+
+	return amountUnlocked
+}
+
+func Zero() *big.Int {
+	return big.NewInt(0)
+}
+
+func addLockedFunds(num *big.Int, vestingSum *big.Int, spec *VestSpec, self *state.StateDB, addr common.Address) {
+	self.AddTotalLockedFunds(addr, vestingSum)
+	funds := self.GetFunds(addr)
+	epochToIndex := make(map[*big.Int]int, len(funds))
+	for i, vf := range funds {
+		epochToIndex[vf.BlockNumber] = i
+	}
+
+	vestBegin := num
+	vestPeriod := big.NewInt(spec.VestPeriod)
+	vestedSoFar := Zero()
+
+	for vestEpoch := new(big.Int).Add(vestBegin, big.NewInt(spec.StepDuration)); vestedSoFar.Cmp(vestingSum) < 0; vestEpoch = new(big.Int).Add(vestEpoch, big.NewInt(spec.StepDuration)) {
+		elapsed := new(big.Int).Sub(vestEpoch, vestBegin)
+		targetVest := Zero()
+		if elapsed.Cmp(big.NewInt(spec.VestPeriod)) < 0 {
+			targetVest = big.NewInt(0).Div(big.NewInt(0).Mul(vestingSum, elapsed), vestPeriod)
+		} else {
+			targetVest = vestingSum
+		}
+
+		vestThisTime := big.NewInt(0).Sub(targetVest, vestedSoFar)
+		vestedSoFar = targetVest
+		if index, ok := epochToIndex[vestEpoch]; ok {
+
+			currentAmt := funds[index].Amount
+			funds[index].Amount = big.NewInt(0).Add(currentAmt, vestThisTime)
+		} else {
+			entry := struct {
+				BlockNumber *big.Int
+				Amount      *big.Int
+			}{BlockNumber: vestEpoch, Amount: vestThisTime}
+			funds = append(funds, entry)
+			epochToIndex[vestEpoch] = len(funds) - 1
+		}
+	}
+
+	sort.Slice(funds, func(first, second int) bool {
+		return funds[first].BlockNumber.Cmp(funds[second].BlockNumber) < 0
+	})
+
+	self.SetFunds(addr, funds)
 }

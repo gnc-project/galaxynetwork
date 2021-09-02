@@ -104,6 +104,40 @@ type (
 		account *common.Address
 		prev    *big.Int
 	}
+
+	pledgeChange struct {
+		account *common.Address
+		prev    *big.Int
+	}
+
+	totalLockedFundsChange struct {
+		account *common.Address
+		prev    *big.Int
+	}
+
+	fundsChange struct {
+		account *common.Address
+		prev    []struct {
+			BlockNumber *big.Int
+			Amount      *big.Int
+		}
+	}
+
+	pidChange struct {
+		account *common.Address
+		prev    common.PidList
+	}
+
+	stakingListChange struct {
+		account *common.Address
+		prev    common.StakingList
+	}
+
+	canReDeemChange struct {
+		account *common.Address
+		prev    common.CanRedeemList
+	}
+
 	nonceChange struct {
 		account *common.Address
 		prev    uint64
@@ -189,11 +223,56 @@ func (ch balanceChange) dirtied() *common.Address {
 	return ch.account
 }
 
+func (ch pledgeChange) revert(s *StateDB) {
+	s.getStateObject(*ch.account).setPledge(ch.prev)
+}
+
+func (ch pledgeChange) dirtied() *common.Address {
+	return ch.account
+}
+
+func (ch fundsChange) revert(s *StateDB) {
+	s.getStateObject(*ch.account).setFunds(ch.prev)
+}
+
+func (ch fundsChange) dirtied() *common.Address {
+	return ch.account
+}
+
+func (ch totalLockedFundsChange) revert(s *StateDB) {
+	s.getStateObject(*ch.account).setTotalLockedFunds(ch.prev)
+}
+
+func (ch totalLockedFundsChange) dirtied() *common.Address {
+	return ch.account
+}
+
+func (ch pidChange) revert(s *StateDB) {
+	s.getStateObject(*ch.account).setPid(ch.prev,)
+}
+
+func (ch pidChange) dirtied() *common.Address {
+	return ch.account
+}
+
 func (ch nonceChange) revert(s *StateDB) {
 	s.getStateObject(*ch.account).setNonce(ch.prev)
 }
 
 func (ch nonceChange) dirtied() *common.Address {
+	return ch.account
+}
+
+func (ch stakingListChange) revert(s *StateDB) {
+	s.getStateObject(common.AllStakingDB).setStakingList(ch.prev)
+}
+func (ch stakingListChange) dirtied() *common.Address {
+	return &common.AllStakingDB
+}
+func (ch canReDeemChange) revert(s *StateDB) {
+	s.getStateObject(*ch.account).setCanRedeem(ch.prev)
+}
+func (ch canReDeemChange) dirtied() *common.Address {
 	return ch.account
 }
 

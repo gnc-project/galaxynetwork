@@ -20,8 +20,11 @@ import (
 	"math/big"
 	"sync/atomic"
 	"time"
+	"encoding/hex"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
@@ -34,8 +37,19 @@ var emptyCodeHash = crypto.Keccak256Hash(nil)
 type (
 	// CanTransferFunc is the signature of a transfer guard function
 	CanTransferFunc func(StateDB, common.Address, *big.Int) bool
+
+	CanRedeemFunc func(StateDB, common.Address,*big.Int,*big.Int) bool 
 	// TransferFunc is the signature of a transfer function
 	TransferFunc func(StateDB, common.Address, common.Address, *big.Int)
+	PledgeFunc   func(StateDB, common.Address, common.Address, *big.Int, []byte)
+	RedeemFunc   func(StateDB, common.Address, common.Address, *big.Int,*big.Int)
+	DelectPidFunc   func(StateDB, common.Address, common.Address, []byte,*big.Int)
+
+	UnlockRewardTransferFunc func(StateDB, common.Address, common.Address, *big.Int, *big.Int)
+
+	StakingTransferFunc func(StateDB, common.Address, common.Address, *big.Int, []byte,*big.Int)
+
+	UnlockStakingTransferFunc func(StateDB,common.Address,common.Address,*big.Int,*big.Int)
 	// GetHashFunc returns the n'th block hash in the blockchain
 	// and is used by the BLOCKHASH EVM op code.
 	GetHashFunc func(uint64) common.Hash
@@ -65,6 +79,21 @@ type BlockContext struct {
 	CanTransfer CanTransferFunc
 	// Transfer transfers ether from one account to the other
 	Transfer TransferFunc
+
+	PledgeTransfer PledgeFunc
+
+	RedeemTransfer RedeemFunc
+
+	DelectPidTransfer DelectPidFunc
+
+	UnlockRewardTransfer UnlockRewardTransferFunc
+
+	StakingTransfer  StakingTransferFunc
+
+	UnlockStakingTransfer UnlockStakingTransferFunc
+
+	CanRedeem CanRedeemFunc
+
 	// GetHash returns the hash corresponding to n
 	GetHash GetHashFunc
 
@@ -164,17 +193,27 @@ func (evm *EVM) Interpreter() *EVMInterpreter {
 // parameters. It also handles any necessary value transfer required and takes
 // the necessary steps to create accounts and reverses the state in case of an
 // execution error or failed value transfer.
-func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64,netcapacity *big.Int, err error) {
+	capacity:=big.NewInt(0)
 	if evm.Config.NoRecursion && evm.depth > 0 {
-		return nil, gas, nil
+		return nil, gas, big.NewInt(0),nil
+
 	}
 	// Fail if we're trying to execute above the call depth limit
 	if evm.depth > int(params.CallCreateDepth) {
-		return nil, gas, ErrDepth
+		return nil, gas,big.NewInt(0), ErrDepth
+
+	}
+	var snapdata []byte
+	if input == nil {
+		snapdata = []byte{}
+	} else {
+		snapdata = input
 	}
 	// Fail if we're trying to transfer more than the available balance
 	if value.Sign() != 0 && !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
-		return nil, gas, ErrInsufficientBalance
+		return nil, gas,big.NewInt(0), ErrInsufficientBalance
+
 	}
 	snapshot := evm.StateDB.Snapshot()
 	p, isPrecompile := evm.precompile(addr)
@@ -186,11 +225,29 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 				evm.Config.Tracer.CaptureStart(evm, caller.Address(), addr, false, input, gas, value)
 				evm.Config.Tracer.CaptureEnd(ret, 0, 0, nil)
 			}
-			return nil, gas, nil
+			return nil, gas, big.NewInt(0),nil
+
 		}
 		evm.StateDB.CreateAccount(addr)
 	}
-	evm.Context.Transfer(evm.StateDB, caller.Address(), addr, value)
+	
+	if len(snapdata) > 6 && strings.EqualFold(hex.EncodeToString(snapdata[:6]), hex.EncodeToString([]byte("pledge"))) && (caller.Address() == addr) {	
+		evm.Context.PledgeTransfer(evm.StateDB, caller.Address(), addr, value, input)
+		capacity=big.NewInt(int64(len(hexutil.SlitData(input))*102))
+	}else if len(snapdata) > 6&&strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("redeem")))&&(caller.Address()==addr){
+		evm.Context.RedeemTransfer(evm.StateDB, caller.Address(), addr, value,evm.Context.BlockNumber)
+	}else if len(snapdata) > 6&&strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("delPid")))&&(caller.Address()==addr){
+		evm.Context.DelectPidTransfer(evm.StateDB, caller.Address(), addr,input,evm.Context.BlockNumber)
+		capacity=new(big.Int).Mul(big.NewInt(int64(len(hexutil.SlitData(input))*102)),big.NewInt(-1))
+	} else if strings.EqualFold(hex.EncodeToString(snapdata), hex.EncodeToString([]byte("unlockReward"))) && (caller.Address() == addr) {
+		evm.Context.UnlockRewardTransfer(evm.StateDB, caller.Address(), addr, value, evm.Context.BlockNumber)
+	}else if len(snapdata) > 7&&strings.EqualFold(hex.EncodeToString(snapdata[:7]), hex.EncodeToString([]byte("staking"))) && (caller.Address() == addr) {
+		evm.Context.StakingTransfer(evm.StateDB, caller.Address(), addr, value,input,evm.Context.BlockNumber)
+	}else if strings.EqualFold(hex.EncodeToString(snapdata), hex.EncodeToString([]byte("unlockStaking"))) && (caller.Address() == addr){
+		evm.Context.UnlockStakingTransfer(evm.StateDB, caller.Address(), addr, value,evm.Context.BlockNumber)
+	}else {
+		evm.Context.Transfer(evm.StateDB, caller.Address(), addr, value)
+	}
 
 	// Capture the tracer start/end events in debug mode
 	if evm.Config.Debug && evm.depth == 0 {
@@ -230,7 +287,8 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		//} else {
 		//	evm.StateDB.DiscardSnapshot(snapshot)
 	}
-	return ret, gas, err
+	return ret, gas, capacity,err
+
 }
 
 // CallCode executes the contract associated with the addr with the given input

@@ -346,6 +346,65 @@ func (ec *Client) BalanceAt(ctx context.Context, account common.Address, blockNu
 	return (*big.Int)(&result), err
 }
 
+func (ec *Client) PledgeAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
+	var result hexutil.Big
+	err := ec.c.CallContext(ctx, &result, "eth_getAllPledgeAmount", account, toBlockNumArg(blockNumber))
+	return (*big.Int)(&result), err
+}
+
+// TotalLockedFundsAt returns the wei TotalLockedFunds balance of the given account.
+// The block number can be nil, in which case the TotalLockedFunds balance is taken from the latest known block.
+func (ec *Client) TotalLockedFundsAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
+	var result hexutil.Big
+	err := ec.c.CallContext(ctx, &result, "eth_getTotalLockedFunds", account, toBlockNumArg(blockNumber))
+	return (*big.Int)(&result), err
+}
+
+func (ec *Client) VerifyPid(ctx context.Context, account common.Address, pidHex string, blockNumber *big.Int) (bool, error) {
+	var result bool
+	err := ec.c.CallContext(ctx, &result, "eth_verifyPid", account, pidHex, toBlockNumArg(blockNumber))
+	return result, err
+}
+
+
+func (ec *Client) GetCanRedeemList(ctx context.Context, account common.Address,blockNumber *big.Int) (common.CanRedeemList, error) {
+	var result common.CanRedeemList
+	err := ec.c.CallContext(ctx, &result, "eth_getCanRedeemList", account,toBlockNumArg(blockNumber))
+	return result, err
+}
+
+
+func (ec *Client) GetRedeemAmount(ctx context.Context, account common.Address,blockNumber *big.Int) (*big.Int, error) {
+	var result *big.Int
+	err := ec.c.CallContext(ctx, &result, "eth_getRedeemAmount", account,toBlockNumArg(blockNumber))
+	return result, err
+}
+
+
+func (ec *Client) GetStakingByAddr(ctx context.Context, account common.Address,blockNumber *big.Int) (common.Staking, error) {
+	var result common.Staking
+	err := ec.c.CallContext(ctx, &result, "eth_getStakingByAddr", account,toBlockNumArg(blockNumber))
+	return result, err
+}
+
+func (ec *Client) GetAllStakingList(ctx context.Context,blockNumber *big.Int) (common.StakingList, error) {
+	var result common.StakingList
+	err := ec.c.CallContext(ctx, &result, "eth_getAllStakingList",toBlockNumArg(blockNumber))
+	return result, err
+}
+
+func (ec *Client) GetUnlockStakingValue(ctx context.Context, account common.Address,blockNumber *big.Int) (*big.Int, error) {
+	var result *big.Int
+	err := ec.c.CallContext(ctx, &result, "eth_getUnlockStakingValue", account,toBlockNumArg(blockNumber))
+	return result, err
+}
+
+func (ec *Client) GetUnlockVestedFunds(ctx context.Context, account common.Address,blockNumber *big.Int) (*big.Int, error) {
+	var result *big.Int
+	err := ec.c.CallContext(ctx, &result, "eth_getUnlockVestedFunds", account,toBlockNumArg(blockNumber))
+	return result, err
+}
+
 // StorageAt returns the value of key in the contract storage of the given account.
 // The block number can be nil, in which case the value is taken from the latest known block.
 func (ec *Client) StorageAt(ctx context.Context, account common.Address, key common.Hash, blockNumber *big.Int) ([]byte, error) {

@@ -33,13 +33,35 @@ type Account struct {
 	Balance  *big.Int
 	Root     []byte
 	CodeHash []byte
+	TotalLockedFunds *big.Int //lock coinbase
+	Pledge *big.Int //Balance of miners pledged
+
+	CanRedeem common.CanRedeemList
+
+	Funds []struct {
+		BlockNumber *big.Int
+		Amount      *big.Int
+	} //Balance of miners Fund by BlockNumber
+
+	Pid common.PidList//Pid by miner
+
+	Staking common.StakingList
 }
 
 // SlimAccount converts a state.Account content into a slim snapshot account
-func SlimAccount(nonce uint64, balance *big.Int, root common.Hash, codehash []byte) Account {
+func SlimAccount(nonce uint64, balance *big.Int, root common.Hash, codehash []byte, totalLockedFunds *big.Int, pledge *big.Int, funds []struct {
+	BlockNumber *big.Int
+	Amount      *big.Int
+}, pid common.PidList,staking common.StakingList,canRedeem common.CanRedeemList) Account {
 	slim := Account{
-		Nonce:   nonce,
-		Balance: balance,
+		Nonce:            nonce,
+		Balance:          balance,
+		TotalLockedFunds: totalLockedFunds,
+		Pledge:           pledge,
+		CanRedeem:        canRedeem,
+		Funds:            funds,
+		Pid:              pid,
+		Staking:          staking,
 	}
 	if root != emptyRoot {
 		slim.Root = root[:]
@@ -52,8 +74,11 @@ func SlimAccount(nonce uint64, balance *big.Int, root common.Hash, codehash []by
 
 // SlimAccountRLP converts a state.Account content into a slim snapshot
 // version RLP encoded.
-func SlimAccountRLP(nonce uint64, balance *big.Int, root common.Hash, codehash []byte) []byte {
-	data, err := rlp.EncodeToBytes(SlimAccount(nonce, balance, root, codehash))
+func SlimAccountRLP(nonce uint64, balance *big.Int, root common.Hash, codehash []byte, totalLockedFunds *big.Int, pledge *big.Int, funds []struct {
+	BlockNumber *big.Int
+	Amount      *big.Int
+}, pid common.PidList,staking common.StakingList,canRedeem common.CanRedeemList) []byte {
+	data, err := rlp.EncodeToBytes(SlimAccount(nonce, balance, root, codehash, totalLockedFunds, pledge, funds, pid,staking,canRedeem))
 	if err != nil {
 		panic(err)
 	}

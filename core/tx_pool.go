@@ -17,14 +17,17 @@
 package core
 
 import (
+	"encoding/hex"
 	"errors"
 	"math"
 	"math/big"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/prque"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -33,6 +36,8 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rewardc"
+
 )
 
 const (
@@ -84,6 +89,15 @@ var (
 	// than some meaningful limit a user might use. This is not a consensus error
 	// making the transaction invalid, rather a DOS protection.
 	ErrOversizedData = errors.New("oversized data")
+
+	ErrInsufficientPledge = errors.New("insufficient funds for Pledge")
+	ErrInsufficientRedeem1 = errors.New("insufficient funds for Redeem amount")
+	ErrInsufficientRedeem2 = errors.New("unlockBlock not now")
+
+	ErrInsufficientUnlockStakingValue=errors.New("insufficient funds for UnlockStaking")
+	ErrInsufficientUnlockRewardValue=errors.New("insufficient funds for UnlockReward")
+
+	ErrInsufficientGas = errors.New(" insufficient funds for gas * price")
 )
 
 var (
@@ -616,8 +630,90 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
-	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
-		return ErrInsufficientFunds
+	var snapdata []byte
+	if tx.Data() == nil {
+		snapdata = []byte{}
+	} else {
+		snapdata = tx.Data()
+	}
+
+
+	
+    if len(snapdata) > 6 {
+		if pool.currentState.GetBalance(from).Cmp(tx.Cost()) <0&&!strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("redeem")))&&!strings.EqualFold(hex.EncodeToString(snapdata),hex.EncodeToString([]byte("unlockStaking"))){
+			return ErrInsufficientFunds
+		}
+		if strings.EqualFold(hex.EncodeToString(snapdata[:6]), hex.EncodeToString([]byte("pledge"))) {
+
+			pidData := hexutil.SlitData(snapdata)
+			for _,pidHex:=range pidData{
+				if pool.currentState.VerifyPid(from,pidHex){
+					return errors.New("Duplicate pledged pid")
+				}
+			}
+			currentNetCapacity:=pool.chain.GetBlock(pool.chain.CurrentBlock().ParentHash(),pool.chain.CurrentBlock().NumberU64()-1).NetCapacity()/1048576
+			switch{
+			case currentNetCapacity<100:
+				currentNetCapacity=1
+			case 100<=currentNetCapacity&&currentNetCapacity<2000:
+				currentNetCapacity=currentNetCapacity/100
+			case 2000<=currentNetCapacity&&currentNetCapacity<10000:
+				currentNetCapacity=currentNetCapacity/1000*10
+			case 10000<=currentNetCapacity&&currentNetCapacity<30000:
+				currentNetCapacity=currentNetCapacity/10000*100
+			default :
+				currentNetCapacity=300
+			}
+			pledgeValue := new(big.Int).Mul(new(big.Int).SetInt64(int64(len(pidData))), new(big.Int).Div(rewardc.PledgeBase[currentNetCapacity*100],big.NewInt(10)))
+			if tx.Value().Cmp(pledgeValue) < 0 || pool.currentState.GetBalance(from).Cmp(pledgeValue) < 0 {
+				return ErrInsufficientPledge
+			}
+		}
+		if strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("redeem"))){
+ 
+			if total := new(big.Int).Mul(tx.GasPrice(), new(big.Int).SetUint64(tx.Gas()));pool.currentState.GetBalance(from).Cmp(total)<0{
+				return ErrInsufficientGas
+			}
+			redeemAmount:=pool.currentState.GetRedeemAmount(from,pool.chain.CurrentBlock().NumberU64())
+			
+			if redeemAmount.Cmp(tx.Value())<0{
+				return ErrInsufficientRedeem1
+			}
+		}
+		if strings.EqualFold(hex.EncodeToString(snapdata), hex.EncodeToString([]byte("unlockStaking"))){
+			if total := new(big.Int).Mul(tx.GasPrice(), new(big.Int).SetUint64(tx.Gas()));pool.currentState.GetBalance(from).Cmp(total)<0{
+				return ErrInsufficientGas
+			}
+			unlockValue:=pool.currentState.GetUnlockStakingValue(from,pool.chain.CurrentBlock().Number().Uint64())
+			
+			if tx.Value().Cmp(unlockValue)!=0{
+				return ErrInsufficientUnlockStakingValue
+			}	
+		}
+	
+		if strings.EqualFold(hex.EncodeToString(snapdata), hex.EncodeToString([]byte("unlockReward"))){
+			if total := new(big.Int).Mul(tx.GasPrice(), new(big.Int).SetUint64(tx.Gas()));pool.currentState.GetBalance(from).Cmp(total)<0{
+				return ErrInsufficientGas
+			}
+			unlockValue:=pool.currentState.UnlockVestedFunds(pool.chain.CurrentBlock().Number(),from)
+			
+			if tx.Value().Cmp(unlockValue)!=0{
+				return ErrInsufficientUnlockRewardValue
+			}	
+		}
+		if len(snapdata) > 7&&strings.EqualFold(hex.EncodeToString(snapdata[:7]), hex.EncodeToString([]byte("staking"))){
+			if tx.Value().Cmp(rewardc.StakingLowerLimit)<0{
+				return ErrInsufficientStakingValue
+			}
+			
+			if pool.currentState.GetBalance(from).Cmp(tx.Cost()) <0{
+				return ErrInsufficientFunds
+			}	
+		}
+	}else{
+		if pool.currentState.GetBalance(from).Cmp(tx.Cost()) <0{
+			return ErrInsufficientFunds
+		}
 	}
 	// Ensure the transaction has more gas than the basic tx fee.
 	intrGas, err := IntrinsicGas(tx.Data(), tx.AccessList(), tx.To() == nil, true, pool.istanbul)
@@ -1294,7 +1390,8 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) []*types.Trans
 		}
 		log.Trace("Removed old queued transactions", "count", len(forwards))
 		// Drop all transactions that are too costly (low balance or out of gas)
-		drops, _ := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
+		unlockValue:=pool.currentState.GetUnlockStakingValue(addr,pool.chain.CurrentBlock().Number().Uint64())
+		drops, _ := list.Filter(pool.currentState.GetBalance(addr),pool,unlockValue,pool.currentMaxGas)
 		for _, tx := range drops {
 			hash := tx.Hash()
 			pool.all.Remove(hash)
@@ -1491,7 +1588,8 @@ func (pool *TxPool) demoteUnexecutables() {
 			log.Trace("Removed old pending transaction", "hash", hash)
 		}
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
-		drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
+		unlockValue:=pool.currentState.GetUnlockStakingValue(addr,pool.chain.CurrentBlock().Number().Uint64())
+		drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool, unlockValue,pool.currentMaxGas)
 		for _, tx := range drops {
 			hash := tx.Hash()
 			log.Trace("Removed unpayable pending transaction", "hash", hash)

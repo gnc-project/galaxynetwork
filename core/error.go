@@ -57,6 +57,11 @@ var (
 	// have enough funds for transfer(topmost call only).
 	ErrInsufficientFundsForTransfer = errors.New("insufficient funds for transfer")
 
+	ErrInsufficientFundsForPledge = errors.New("insufficient funds for Pledge")
+
+	ErrInsufficientStakingValue = errors.New("The staking amount is too small,Minimum 1000")
+
+
 	// ErrInsufficientFunds is returned if the total cost of executing a transaction
 	// is higher than the balance of the user's account.
 	ErrInsufficientFunds = errors.New("insufficient funds for gas * price + value")

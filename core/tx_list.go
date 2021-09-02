@@ -22,6 +22,8 @@ import (
 	"math/big"
 	"sort"
 	"time"
+	"strings"
+	"encoding/hex"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -327,17 +329,48 @@ func (l *txList) Forward(threshold uint64) types.Transactions {
 // a point in calculating all the costs or if the balance covers all. If the threshold
 // is lower than the costgas cap, the caps will be reset to a new high after removing
 // the newly invalidated transactions.
-func (l *txList) Filter(costLimit *big.Int, gasLimit uint64) (types.Transactions, types.Transactions) {
+func (l *txList) Filter(costLimit *big.Int,pool *TxPool, unlockStakingLimit *big.Int,gasLimit uint64) (types.Transactions, types.Transactions) {
 	// If all transactions are below the threshold, short circuit
-	if l.costcap.Cmp(costLimit) <= 0 && l.gascap <= gasLimit {
-		return nil, nil
+	for _,tx:=range l.txs.items{
+		if len(tx.Data())>6{
+			if !strings.EqualFold(hex.EncodeToString(tx.Data()[:6]),hex.EncodeToString([]byte("redeem")))&&!strings.EqualFold(hex.EncodeToString(tx.Data()),hex.EncodeToString([]byte("unlockStaking"))){
+				if l.costcap.Cmp(costLimit) <= 0 && l.gascap <= gasLimit {
+					return nil, nil
+				}
+			}else if strings.EqualFold(hex.EncodeToString(tx.Data()[:6]),hex.EncodeToString([]byte("redeem"))){
+				redeemLimit:=pool.currentState.GetRedeemAmount(*tx.To(),pool.chain.CurrentBlock().NumberU64())
+				if l.costcap.Cmp(redeemLimit) < 0 && l.gascap <= gasLimit{
+					return nil, nil
+				}
+			}else if strings.EqualFold(hex.EncodeToString(tx.Data()),hex.EncodeToString([]byte("unlockStaking"))){
+				if l.costcap.Cmp(unlockStakingLimit) < 0 && l.gascap <= gasLimit{
+					return nil, nil
+				}
+			}
+		}else{
+			if l.costcap.Cmp(costLimit) <= 0 && l.gascap <= gasLimit {
+				return nil, nil
+			}
+		}
+		
 	}
 	l.costcap = new(big.Int).Set(costLimit) // Lower the caps to the thresholds
 	l.gascap = gasLimit
 
 	// Filter out all the transactions above the account's funds
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
-		return tx.Gas() > gasLimit || tx.Cost().Cmp(costLimit) > 0
+		if len(tx.Data())>6{
+			if strings.EqualFold(hex.EncodeToString(tx.Data()[:6]),hex.EncodeToString([]byte("redeem"))){
+				redeemLimit:=pool.currentState.GetRedeemAmount(*tx.To(),pool.chain.CurrentBlock().NumberU64())
+				return tx.Gas() > gasLimit || tx.Cost().Cmp(redeemLimit) > 0
+			}
+		}
+		
+		if strings.EqualFold(hex.EncodeToString(tx.Data()),hex.EncodeToString([]byte("unlockStaking"))){
+			return tx.Gas() > gasLimit || tx.Cost().Cmp(unlockStakingLimit) > 0
+		}
+
+			return tx.Gas() > gasLimit || tx.Cost().Cmp(costLimit) > 0
 	})
 
 	if len(removed) == 0 {
