@@ -26,12 +26,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/gnc-project/galaxynetwork/common"
+	"github.com/gnc-project/galaxynetwork/core/rawdb"
+	"github.com/gnc-project/galaxynetwork/ethdb"
+	"github.com/gnc-project/galaxynetwork/log"
+	"github.com/gnc-project/galaxynetwork/rlp"
+	"github.com/gnc-project/galaxynetwork/trie"
 )
 
 // trieKV represents a trie key-value pair

@@ -26,15 +26,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state/snapshot"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth/protocols/eth"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/gnc-project/galaxynetwork"
+	"github.com/gnc-project/galaxynetwork/common"
+	"github.com/gnc-project/galaxynetwork/core/rawdb"
+	"github.com/gnc-project/galaxynetwork/core/state/snapshot"
+	"github.com/gnc-project/galaxynetwork/core/types"
+	"github.com/gnc-project/galaxynetwork/eth/protocols/eth"
+	"github.com/gnc-project/galaxynetwork/ethdb"
+	"github.com/gnc-project/galaxynetwork/event"
+	"github.com/gnc-project/galaxynetwork/trie"
 )
 
 // Reduce some of the parameters to make the tester faster.

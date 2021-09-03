@@ -22,14 +22,14 @@ import (
 	"encoding/hex"
 
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/rewardc"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/gnc-project/galaxynetwork/common"
+	"github.com/gnc-project/galaxynetwork/consensus"
+	"github.com/gnc-project/galaxynetwork/core/types"
+	"github.com/gnc-project/galaxynetwork/core/vm"
+	"github.com/gnc-project/galaxynetwork/common/hexutil"
+	"github.com/gnc-project/galaxynetwork/rewardc"
+	"github.com/gnc-project/galaxynetwork/consensus/ethash"
+	"github.com/gnc-project/galaxynetwork/core/state"
 
 
 )

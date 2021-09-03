@@ -26,15 +26,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/console/prompt"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/eth/ethconfig"
-	"github.com/ethereum/go-ethereum/internal/jsre"
-	"github.com/ethereum/go-ethereum/miner"
-	"github.com/ethereum/go-ethereum/node"
+	"github.com/gnc-project/galaxynetwork/common"
+	"github.com/gnc-project/galaxynetwork/consensus/ethash"
+	"github.com/gnc-project/galaxynetwork/console/prompt"
+	"github.com/gnc-project/galaxynetwork/core"
+	"github.com/gnc-project/galaxynetwork/eth"
+	"github.com/gnc-project/galaxynetwork/eth/ethconfig"
+	"github.com/gnc-project/galaxynetwork/internal/jsre"
+	"github.com/gnc-project/galaxynetwork/miner"
+	"github.com/gnc-project/galaxynetwork/node"
 )
 
 const (

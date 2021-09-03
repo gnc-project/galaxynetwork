@@ -21,11 +21,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/ethdb/memorydb"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/gnc-project/galaxynetwork/common"
+	"github.com/gnc-project/galaxynetwork/ethdb"
+	"github.com/gnc-project/galaxynetwork/ethdb/memorydb"
+	"github.com/gnc-project/galaxynetwork/log"
+	"github.com/gnc-project/galaxynetwork/rlp"
 )
 
 // Prove constructs a merkle proof for key. The result contains all encoded nodes

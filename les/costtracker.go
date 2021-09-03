@@ -23,12 +23,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/eth/ethconfig"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/les/flowcontrol"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/gnc-project/galaxynetwork/common/mclock"
+	"github.com/gnc-project/galaxynetwork/eth/ethconfig"
+	"github.com/gnc-project/galaxynetwork/ethdb"
+	"github.com/gnc-project/galaxynetwork/les/flowcontrol"
+	"github.com/gnc-project/galaxynetwork/log"
+	"github.com/gnc-project/galaxynetwork/metrics"
 )
 
 const makeCostStats = false // make request cost statistics during operation

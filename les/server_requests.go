@@ -20,15 +20,15 @@ import (
 	"encoding/binary"
 	"encoding/json"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/light"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/gnc-project/galaxynetwork/common"
+	"github.com/gnc-project/galaxynetwork/core"
+	"github.com/gnc-project/galaxynetwork/core/state"
+	"github.com/gnc-project/galaxynetwork/core/types"
+	"github.com/gnc-project/galaxynetwork/light"
+	"github.com/gnc-project/galaxynetwork/log"
+	"github.com/gnc-project/galaxynetwork/metrics"
+	"github.com/gnc-project/galaxynetwork/rlp"
+	"github.com/gnc-project/galaxynetwork/trie"
 )
 
 // serverBackend defines the backend functions needed for serving LES requests

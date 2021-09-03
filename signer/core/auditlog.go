@@ -20,11 +20,11 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/internal/ethapi"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/signer/core/apitypes"
+	"github.com/gnc-project/galaxynetwork/common"
+	"github.com/gnc-project/galaxynetwork/common/hexutil"
+	"github.com/gnc-project/galaxynetwork/internal/ethapi"
+	"github.com/gnc-project/galaxynetwork/log"
+	"github.com/gnc-project/galaxynetwork/signer/core/apitypes"
 )
 
 type AuditLogger struct {

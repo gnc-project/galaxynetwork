@@ -19,7 +19,7 @@ package core
 import (
 	"errors"
 
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/gnc-project/galaxynetwork/core/types"
 )
 
 var (

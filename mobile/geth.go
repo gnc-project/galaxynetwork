@@ -24,17 +24,17 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/eth/ethconfig"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/ethstats"
-	"github.com/ethereum/go-ethereum/internal/debug"
-	"github.com/ethereum/go-ethereum/les"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/nat"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/gnc-project/galaxynetwork/core"
+	"github.com/gnc-project/galaxynetwork/eth/downloader"
+	"github.com/gnc-project/galaxynetwork/eth/ethconfig"
+	"github.com/gnc-project/galaxynetwork/ethclient"
+	"github.com/gnc-project/galaxynetwork/ethstats"
+	"github.com/gnc-project/galaxynetwork/internal/debug"
+	"github.com/gnc-project/galaxynetwork/les"
+	"github.com/gnc-project/galaxynetwork/node"
+	"github.com/gnc-project/galaxynetwork/p2p"
+	"github.com/gnc-project/galaxynetwork/p2p/nat"
+	"github.com/gnc-project/galaxynetwork/params"
 )
 
 // NodeConfig represents the collection of configuration values to fine tune the Geth

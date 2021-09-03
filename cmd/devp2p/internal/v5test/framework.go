@@ -24,11 +24,11 @@ import (
 	"net"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/p2p/discover/v5wire"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/gnc-project/galaxynetwork/common/mclock"
+	"github.com/gnc-project/galaxynetwork/crypto"
+	"github.com/gnc-project/galaxynetwork/p2p/discover/v5wire"
+	"github.com/gnc-project/galaxynetwork/p2p/enode"
+	"github.com/gnc-project/galaxynetwork/p2p/enr"
 )
 
 // readError represents an error during packet reading.

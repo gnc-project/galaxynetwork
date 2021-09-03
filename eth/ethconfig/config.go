@@ -18,7 +18,7 @@
 package ethconfig
 
 import (
-	"github.com/ethereum/go-ethereum/rewardc"
+	"github.com/gnc-project/galaxynetwork/rewardc"
 	"math/big"
 	"os"
 	"os/user"
@@ -26,18 +26,18 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/clique"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/eth/gasprice"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/miner"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/gnc-project/galaxynetwork/common"
+	"github.com/gnc-project/galaxynetwork/consensus"
+	"github.com/gnc-project/galaxynetwork/consensus/clique"
+	"github.com/gnc-project/galaxynetwork/consensus/ethash"
+	"github.com/gnc-project/galaxynetwork/core"
+	"github.com/gnc-project/galaxynetwork/eth/downloader"
+	"github.com/gnc-project/galaxynetwork/eth/gasprice"
+	"github.com/gnc-project/galaxynetwork/ethdb"
+	"github.com/gnc-project/galaxynetwork/log"
+	"github.com/gnc-project/galaxynetwork/miner"
+	"github.com/gnc-project/galaxynetwork/node"
+	"github.com/gnc-project/galaxynetwork/params"
 )
 
 // FullNodeGPO contains default gasprice oracle settings for full node.

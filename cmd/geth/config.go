@@ -27,14 +27,14 @@ import (
 
 	"gopkg.in/urfave/cli.v1"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/eth/catalyst"
-	"github.com/ethereum/go-ethereum/eth/ethconfig"
-	"github.com/ethereum/go-ethereum/internal/ethapi"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/gnc-project/galaxynetwork/cmd/utils"
+	"github.com/gnc-project/galaxynetwork/eth/catalyst"
+	"github.com/gnc-project/galaxynetwork/eth/ethconfig"
+	"github.com/gnc-project/galaxynetwork/internal/ethapi"
+	"github.com/gnc-project/galaxynetwork/log"
+	"github.com/gnc-project/galaxynetwork/metrics"
+	"github.com/gnc-project/galaxynetwork/node"
+	"github.com/gnc-project/galaxynetwork/params"
 	"github.com/naoina/toml"
 )
 

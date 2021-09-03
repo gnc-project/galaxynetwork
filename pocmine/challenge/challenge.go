@@ -3,8 +3,8 @@ package challenge
 import (
 	"bytes"
 	"crypto/sha256"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/gnc-project/galaxynetwork/common"
+	"github.com/gnc-project/galaxynetwork/core/types"
 	"math/big"
 )
 

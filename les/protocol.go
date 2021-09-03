@@ -23,12 +23,12 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	vfc "github.com/ethereum/go-ethereum/les/vflux/client"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/gnc-project/galaxynetwork/common"
+	"github.com/gnc-project/galaxynetwork/core/types"
+	"github.com/gnc-project/galaxynetwork/crypto"
+	vfc "github.com/gnc-project/galaxynetwork/les/vflux/client"
+	"github.com/gnc-project/galaxynetwork/p2p/enode"
+	"github.com/gnc-project/galaxynetwork/rlp"
 )
 
 // Constants to match up protocol versions and messages

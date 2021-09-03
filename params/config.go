@@ -19,10 +19,10 @@ package params
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/ethereum/go-ethereum/rewardc"
+	"github.com/gnc-project/galaxynetwork/rewardc"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/gnc-project/galaxynetwork/common"
 	"golang.org/x/crypto/sha3"
 )
 

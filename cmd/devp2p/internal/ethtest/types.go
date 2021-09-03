@@ -20,10 +20,10 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/eth/protocols/eth"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/rlpx"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/gnc-project/galaxynetwork/eth/protocols/eth"
+	"github.com/gnc-project/galaxynetwork/p2p"
+	"github.com/gnc-project/galaxynetwork/p2p/rlpx"
+	"github.com/gnc-project/galaxynetwork/rlp"
 )
 
 type Message interface {

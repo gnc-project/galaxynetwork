@@ -2,7 +2,7 @@ package pocmine
 
 import (
 	"crypto/sha256"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/gnc-project/galaxynetwork/common"
 	"math/big"
 	"sync"
 )

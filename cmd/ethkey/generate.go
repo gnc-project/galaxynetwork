@@ -23,9 +23,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/gnc-project/galaxynetwork/accounts/keystore"
+	"github.com/gnc-project/galaxynetwork/cmd/utils"
+	"github.com/gnc-project/galaxynetwork/crypto"
 	"github.com/google/uuid"
 	"gopkg.in/urfave/cli.v1"
 )

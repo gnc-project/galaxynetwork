@@ -19,9 +19,9 @@ package client
 import (
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/les/utils"
-	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/gnc-project/galaxynetwork/common/mclock"
+	"github.com/gnc-project/galaxynetwork/les/utils"
+	"github.com/gnc-project/galaxynetwork/p2p/enode"
 )
 
 // PrivateClientAPI implements the vflux client side API

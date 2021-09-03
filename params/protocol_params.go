@@ -17,7 +17,7 @@
 package params
 
 import (
-	"github.com/ethereum/go-ethereum/rewardc"
+	"github.com/gnc-project/galaxynetwork/rewardc"
 	"math/big"
 )
 

@@ -19,8 +19,8 @@ package client
 import (
 	"io"
 
-	"github.com/ethereum/go-ethereum/les/utils"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/gnc-project/galaxynetwork/les/utils"
+	"github.com/gnc-project/galaxynetwork/rlp"
 )
 
 const basketFactor = 1000000 // reference basket amount and value scale factor

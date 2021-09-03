@@ -17,7 +17,7 @@
 package vm
 
 import (
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/gnc-project/galaxynetwork/params"
 )
 
 func minSwapStack(n int) int {
