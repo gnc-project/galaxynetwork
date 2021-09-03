@@ -600,10 +600,8 @@ func accumulateRewards(chain consensus.ChainHeaderReader, state *state.StateDB, 
 
 	// Accumulate the rewards for the miner and any included uncles
 	for _, uncle := range uncles {
-		fmt.Println("header.uncle------------->",header.Coinbase)
 		state.AddBalance(uncle.Coinbase, big.NewInt(0))
 	}
-	fmt.Println("header.Coinbase------------->",header.Coinbase)
 	state.AddBalance(header.Coinbase, new(big.Int).Add(available, amountUnlocked))
 
 	stakingList:=state.GetAllStakingList()

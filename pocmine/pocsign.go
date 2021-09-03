@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 type Owner struct{
@@ -45,34 +46,28 @@ func Sign(header *types.Header) (sig []byte, err error) {
 
 func Verify(pubkey []byte, header *types.Header, signature []byte) bool  {
 
-	//recoveredPubkey, err := crypto.SigToPub(ShaInput(header), header.Signed)
-	//if err != nil || recoveredPubkey == nil {
-	//	log.Error("verify pubkey","err",err)
-	//	return false
-	//}
-	//
-	//if crypto.PubkeyToAddress(*recoveredPubkey) != header.Coinbase {
-	//	log.Error("verify coinbase pub","err","The signature is not from coinbase")
-	//	return false
-	//}
+	recoveredPubkey, err := crypto.SigToPub(ShaInput(header), header.Signed)
+	if err != nil || recoveredPubkey == nil {
+		log.Error("verify pubkey","err",err)
+		return false
+	}
+
+	if crypto.PubkeyToAddress(*recoveredPubkey) != header.Coinbase {
+		log.Error("verify coinbase pub","err","The signature is not from coinbase")
+		return false
+	}
 
 	return crypto.VerifySignature(pubkey,ShaInput(header),signature)
 }
 
 func ShaInput(header *types.Header) []byte {
-
 	sh := sha256.New()
 	sh.Write(header.Root[:])
 	sh.Write(header.Pid[:])
 	sh.Write(header.Proof)
 	sh.Write(header.Coinbase[:])
+	sh.Write(header.ParentHash[:])
+	sh.Write(header.Number.Bytes())
 
-	//sh := sha256.New()
-	//sh.Write(header.Root[:])
-	//sh.Write(header.Pid[:])
-	//sh.Write(header.Proof)
-	//sh.Write(header.Coinbase[:])
-	//sh.Write(header.ParentHash[:])
-	//sh.Write(header.Number.Bytes())
 	return sh.Sum(nil)
 }

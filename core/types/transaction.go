@@ -300,6 +300,11 @@ func (tx *Transaction) Cost() *big.Int {
 	return total
 }
 
+func (tx *Transaction) Cost2() *big.Int {
+	total := new(big.Int).Mul(tx.GasPrice(), new(big.Int).SetUint64(tx.Gas()))
+	return total
+}
+
 // RawSignatureValues returns the V, R, S signature values of the transaction.
 // The return values should not be modified by the caller.
 func (tx *Transaction) RawSignatureValues() (v, r, s *big.Int) {

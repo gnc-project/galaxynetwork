@@ -56,6 +56,48 @@ type PublicEthereumAPI struct {
 	b Backend
 }
 
+//poc
+func (b *PublicEthereumAPI) AddPlot(ctx context.Context, pid string, proof string, k int ,difficulty *big.Int, number *big.Int,timestamp int64) (map[string]interface{}, error) {
+
+	id := common.HexToHash(pid)
+
+	pro, err := hexutil.Decode(proof)
+	if err != nil {
+		return nil, err
+	}
+
+	workPoc, err := b.b.AddPlot(ctx, id,pro,k,difficulty, number,timestamp)
+	if workPoc == nil || err != nil {
+		return nil, err
+	}
+
+	result := map[string]interface{}{
+		"pid":         	pid,
+		"number": 	  	number,
+		"difficulty":	difficulty,
+		"timestamp": 	timestamp,
+	}
+
+	return result, nil
+}
+
+func (b *PublicEthereumAPI)MinerInfo(ctx context.Context) (map[string]interface{}, error)  {
+	info, err := b.b.MinerInfo(ctx)
+	if err != nil || info == nil {
+		return nil, err
+	}
+
+	result := map[string]interface{}{
+		"number":	info.Number,
+		"challenge": info.Challenge,
+		"lastBlockTime": info.LastBlockTime,
+		"difficulty":	info.Difficulty,
+	}
+
+	return result, nil
+}
+
+
 // NewPublicEthereumAPI creates a new Ethereum protocol API.
 func NewPublicEthereumAPI(b Backend) *PublicEthereumAPI {
 	return &PublicEthereumAPI{b}
