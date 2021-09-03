@@ -20,8 +20,11 @@ import (
 	"bytes"
 	"context"
 	crand "crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/pocmine"
 	"math"
 	"math/big"
 	"math/rand"
@@ -96,7 +99,7 @@ func (ethash *Ethash) Seal(chain consensus.ChainHeaderReader, block *types.Block
 		pend.Add(1)
 		go func(id int, nonce uint64) {
 			defer pend.Done()
-			ethash.mine(block, id, nonce, abort, locals)
+			ethash.mine(chain, block, id, nonce, abort, locals)
 		}(i, uint64(ethash.rand.Int63()))
 	}
 	// Wait until sealing is terminated or a nonce is found
@@ -129,20 +132,20 @@ func (ethash *Ethash) Seal(chain consensus.ChainHeaderReader, block *types.Block
 
 // mine is the actual proof-of-work miner that searches for a nonce starting from
 // seed that results in correct final block difficulty.
-func (ethash *Ethash) mine(block *types.Block, id int, seed uint64, abort chan struct{}, found chan *types.Block) {
+func (ethash *Ethash) mine(chain consensus.ChainHeaderReader, block *types.Block, id int, seed uint64, abort chan struct{}, found chan *types.Block) {
 	// Extract some data from the header
 	var (
 		header  = block.Header()
-		hash    = ethash.SealHash(header).Bytes()
-		target  = new(big.Int).Div(two256, header.Difficulty)
-		number  = header.Number.Uint64()
-		dataset = ethash.dataset(number, false)
+		//hash    = ethash.SealHash(header).Bytes()
+		//target  = new(big.Int).Div(two256, header.Difficulty)
+		//number  = header.Number.Uint64()
+		//dataset = ethash.dataset(number, false)
 	)
 	// Start generating random nonces until we abort or find a good one
 	var (
 		attempts  = int64(0)
 		nonce     = seed
-		powBuffer = new(big.Int)
+		//powBuffer = new(big.Int)
 	)
 	logger := ethash.config.Log.New("miner", id)
 	logger.Trace("Started ethash search for new nonces", "seed", seed)
@@ -157,18 +160,60 @@ search:
 
 		default:
 			// We don't have to update hash rate on every nonce, so update after after 2^X nonces
-			attempts++
-			if (attempts % (1 << 15)) == 0 {
-				ethash.hashrate.Mark(attempts)
-				attempts = 0
-			}
-			// Compute the PoW value of this nonce
-			digest, result := hashimotoFull(dataset.dataset, hash, nonce)
-			if powBuffer.SetBytes(result).Cmp(target) <= 0 {
-				// Correct nonce found, create a new header with it
-				header = types.CopyHeader(header)
-				header.Nonce = types.EncodeNonce(nonce)
-				header.MixDigest = common.BytesToHash(digest)
+			ge := pocmine.GetGenerator()
+			ge.Range(func(key, value interface{}) bool {
+
+				workPoc := value.(*pocmine.WorkPoc)
+				if header.Number.Cmp(workPoc.Number) != 0 {
+					ge.Delete(key)
+					return true
+				}
+
+				headerTmp := &types.Header{}
+				headerTmp.ParentHash = header.ParentHash
+				headerTmp.Number = workPoc.Number
+				headerTmp.Time = uint64(workPoc.Timestamp)
+				headerTmp.Proof = workPoc.Proof
+				headerTmp.Pid  = workPoc.Pid
+				headerTmp.K   = uint64(workPoc.K)
+				headerTmp.Challenge = *CalcNextChallenge(chain.CurrentHeader())
+				if err := ethash.Prepare(chain,headerTmp); err != nil {
+					log.Error("sealer diff failed","err",err.Error())
+					ge.Delete(key)
+					return true
+				}
+
+				log.Info("sealer","challenge", headerTmp.Challenge.Hex(),"proof--->",hex.EncodeToString(headerTmp.Proof),
+					"pid",headerTmp.Pid,"difficulty",headerTmp.Difficulty)
+
+				if err := ethash.verifyPoc(headerTmp,chain.CurrentHeader()); err != nil {
+					log.Error("sealer","err",err.Error())
+					ge.Delete(key)
+					return true
+				}
+
+				//copy tmp to header
+				header.Time  = headerTmp.Time
+				header.Proof = headerTmp.Proof
+				header.Pid	 = headerTmp.Pid
+				header.K     = headerTmp.K
+				header.Difficulty  = headerTmp.Difficulty
+				header.Challenge  = headerTmp.Challenge
+				if sig,err := pocmine.Sign(header);err != nil {
+					log.Error("sealer","sig",err)
+					ge.Delete(key)
+					return true
+				}else {
+					header.Signed = sig
+				}
+
+				if err := ethash.verifySig(header); err != nil {
+					log.Error("sealer","sig verify",err)
+					ge.Delete(key)
+					return true
+				}
+
+				log.Info("mining", "number", header.Number, "hash",header.Hash().Hex(),"diff",header.Difficulty)
 
 				// Seal and return a block (if still needed)
 				select {
@@ -177,14 +222,14 @@ search:
 				case <-abort:
 					logger.Trace("Ethash nonce found but discarded", "attempts", nonce-seed, "nonce", nonce)
 				}
-				break search
-			}
-			nonce++
+				ge.Delete(key)
+				return false
+			})
 		}
 	}
 	// Datasets are unmapped in a finalizer. Ensure that the dataset stays live
 	// during sealing so it's not unmapped while being read.
-	runtime.KeepAlive(dataset)
+	//runtime.KeepAlive(dataset)
 }
 
 // This is the timeout for HTTP requests to notify external miners.

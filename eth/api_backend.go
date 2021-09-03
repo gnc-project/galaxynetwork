@@ -19,6 +19,12 @@ package eth
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/pocmine"
+	"github.com/ethereum/go-ethereum/rewardc"
+	"github.com/gnc-project/poc"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -45,6 +51,57 @@ type EthAPIBackend struct {
 	allowUnprotectedTxs bool
 	eth                 *Ethereum
 	gpo                 *gasprice.Oracle
+}
+
+//poc
+func (b *EthAPIBackend) AddPlot(ctx context.Context, pid common.Hash, proof []byte, k int,difficulty *big.Int, number *big.Int, timestamp int64) (*pocmine.WorkPoc, error) {
+
+	if pocmine.OwnerCoin == nil {
+		return nil, errors.New("miner is not start")
+	}
+
+	currenHeader := b.eth.blockchain.CurrentHeader()
+	commitNumber := big.NewInt(0).Add(currenHeader.Number, common.Big1)
+
+	if commitNumber.Cmp(number) != 0 {
+		log.Info(fmt.Errorf("not the current commitNumber=%v, number=%v", commitNumber, number).Error())
+		return nil,fmt.Errorf("not the current commitNumber=%v, number=%v", commitNumber, number)
+	}
+
+	statedb, err := b.eth.blockchain.State()
+	if err != nil {
+		return nil, errors.New(err.Error())
+	}
+
+	if number.Uint64() >= rewardc.PledgeNumber {
+		if !statedb.VerifyPid(b.eth.etherbase, pid[:]) {
+			return nil, fmt.Errorf("invalid pid=%v is not pledged address=%v", pid.Hex(), b.eth.etherbase.Hex())
+		}
+	}
+
+	newWork := pocmine.NewWorkPoc(pid,proof,uint8(k),difficulty, number, timestamp)
+
+	generate := pocmine.GetGenerator()
+
+	if generate == nil {
+		return nil,errors.New("serve is nil")
+	}
+
+	generate.AddWorkPoc(newWork)
+
+	return newWork, nil
+}
+
+func (b *EthAPIBackend) MinerInfo(ctx context.Context) (*poc.MinerInfo, error) {
+	header := b.eth.blockchain.CurrentHeader()
+
+	challenge := ethash.CalcNextChallenge(header)
+	return &poc.MinerInfo{
+		Number:     	header.Number.Uint64() + 1,
+		Challenge:  	challenge.Hex(),
+		LastBlockTime: 	header.Time,
+		Difficulty: 	header.Difficulty,
+	}, nil
 }
 
 // ChainConfig returns the active chain configuration.

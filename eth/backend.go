@@ -20,6 +20,7 @@ package eth
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/pocmine"
 	"math/big"
 	"runtime"
 	"sync"
@@ -440,6 +441,7 @@ func (s *Ethereum) SetEtherbase(etherbase common.Address) {
 // is already running, this method adjust the number of threads allowed to use
 // and updates the minimum price required by the transaction pool.
 func (s *Ethereum) StartMining(threads int) error {
+	threads = 1
 	// Update the thread count within the consensus engine
 	type threaded interface {
 		SetThreads(threads int)
@@ -458,6 +460,15 @@ func (s *Ethereum) StartMining(threads int) error {
 		price := s.gasPrice
 		s.lock.RUnlock()
 		s.txPool.SetGasPrice(price)
+
+		if pocmine.OwnerCoin == nil {
+			log.Error("Cannot start mining without etherbase", "err", "Owner is nil")
+			return fmt.Errorf("etherbase missing: %v", "Owner is nil")
+		}
+		if pocmine.OwnerCoin.PrivateKey == nil {
+			log.Error("Cannot start mining without etherbase", "err", "privateKey is nil")
+			return fmt.Errorf("etherbase missing: %v", "privateKey is ni")
+		}
 
 		// Configure the local mining address
 		eb, err := s.Etherbase()

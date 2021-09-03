@@ -14,6 +14,7 @@ const (
     DayBlock               =3600/FutureBlockTime
 	GenesisTimestamp       =1630043179
 	MinSectorExpiration    = 180
+	ChainID					= 37021
 )
 
 var (

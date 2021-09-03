@@ -29,6 +29,12 @@ func (h Header) MarshalJSON() ([]byte, error) {
 		GasUsed     hexutil.Uint64 `json:"gasUsed"          gencodec:"required"`
 		Time        hexutil.Uint64 `json:"timestamp"        gencodec:"required"`
 		Extra       hexutil.Bytes  `json:"extraData"        gencodec:"required"`
+		Pid         common.Hash    `json:"pid"              gencodec:"required"`
+		K           hexutil.Uint64 `json:"k"                gencodec:"required"`
+		Challenge   common.Hash    `json:"challenge"        gencodec:"required"`
+		Proof       hexutil.Bytes  `json:"proof"            gencodec:"required"`
+		Signed      hexutil.Bytes  `json:"signed"           gencodec:"required"`
+		NetCapacity hexutil.Uint64 `json:"netCapacity"     gencodec:"required"`
 		MixDigest   common.Hash    `json:"mixHash"`
 		Nonce       BlockNonce     `json:"nonce"`
 		BaseFee     *hexutil.Big   `json:"baseFeePerGas" rlp:"optional"`
@@ -48,6 +54,12 @@ func (h Header) MarshalJSON() ([]byte, error) {
 	enc.GasUsed = hexutil.Uint64(h.GasUsed)
 	enc.Time = hexutil.Uint64(h.Time)
 	enc.Extra = h.Extra
+	enc.Pid = h.Pid
+	enc.K = hexutil.Uint64(h.K)
+	enc.Challenge = h.Challenge
+	enc.Proof = h.Proof
+	enc.Signed = h.Signed
+	enc.NetCapacity = hexutil.Uint64(h.NetCapacity)
 	enc.MixDigest = h.MixDigest
 	enc.Nonce = h.Nonce
 	enc.BaseFee = (*hexutil.Big)(h.BaseFee)
@@ -71,6 +83,12 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		GasUsed     *hexutil.Uint64 `json:"gasUsed"          gencodec:"required"`
 		Time        *hexutil.Uint64 `json:"timestamp"        gencodec:"required"`
 		Extra       *hexutil.Bytes  `json:"extraData"        gencodec:"required"`
+		Pid         *common.Hash    `json:"pid"              gencodec:"required"`
+		K           *hexutil.Uint64 `json:"k"                gencodec:"required"`
+		Challenge   *common.Hash    `json:"challenge"        gencodec:"required"`
+		Proof       *hexutil.Bytes  `json:"proof"            gencodec:"required"`
+		Signed      *hexutil.Bytes  `json:"signed"           gencodec:"required"`
+		NetCapacity *hexutil.Uint64 `json:"netCapacity"     gencodec:"required"`
 		MixDigest   *common.Hash    `json:"mixHash"`
 		Nonce       *BlockNonce     `json:"nonce"`
 		BaseFee     *hexutil.Big    `json:"baseFeePerGas" rlp:"optional"`
@@ -131,6 +149,30 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'extraData' for Header")
 	}
 	h.Extra = *dec.Extra
+	if dec.Pid == nil {
+		return errors.New("missing required field 'pid' for Header")
+	}
+	h.Pid = *dec.Pid
+	if dec.K == nil {
+		return errors.New("missing required field 'k' for Header")
+	}
+	h.K = uint64(*dec.K)
+	if dec.Challenge == nil {
+		return errors.New("missing required field 'challenge' for Header")
+	}
+	h.Challenge = *dec.Challenge
+	if dec.Proof == nil {
+		return errors.New("missing required field 'proof' for Header")
+	}
+	h.Proof = *dec.Proof
+	if dec.Signed == nil {
+		return errors.New("missing required field 'signed' for Header")
+	}
+	h.Signed = *dec.Signed
+	if dec.NetCapacity == nil {
+		return errors.New("missing required field 'netCapacity' for Header")
+	}
+	h.NetCapacity = uint64(*dec.NetCapacity)
 	if dec.MixDigest != nil {
 		h.MixDigest = *dec.MixDigest
 	}

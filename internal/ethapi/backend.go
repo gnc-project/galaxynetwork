@@ -19,6 +19,8 @@ package ethapi
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/pocmine"
+	"github.com/gnc-project/poc"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -90,6 +92,10 @@ type Backend interface {
 
 	ChainConfig() *params.ChainConfig
 	Engine() consensus.Engine
+
+	//poc
+	AddPlot(ctx context.Context, pid common.Hash, proof []byte, k int,difficulty *big.Int, number *big.Int, timestamp int64) (*pocmine.WorkPoc, error)
+	MinerInfo(ctx context.Context) (*poc.MinerInfo, error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

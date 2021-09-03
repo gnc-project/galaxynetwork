@@ -17,6 +17,13 @@ geth:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/geth\" to launch geth."
 
+gnc1:
+	@rm -rf /nvme/data/geth1/*
+	$(GORUN) build/ci.go install ./cmd/geth
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/geth\" to launch geth."
+	@./build/bin/geth --datadir=/nvme/data/geth1/ --syncmode 'full' --cache 256 --rpc  --rpcaddr='0.0.0.0' --rpcapi='eth' --rpcport=8545
+
 all:
 	$(GORUN) build/ci.go install
 

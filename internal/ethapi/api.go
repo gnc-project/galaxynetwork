@@ -18,12 +18,12 @@ package ethapi
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
 	"strings"
 	"time"
-	"encoding/hex"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -795,7 +795,7 @@ func (s *PublicBlockChainAPI) GetHeaderByNumber(ctx context.Context, number rpc.
 		response := s.rpcMarshalHeader(ctx, header)
 		if number == rpc.PendingBlockNumber {
 			// Pending header need to nil out a few fields
-			for _, field := range []string{"hash", "nonce", "miner"} {
+			for _, field := range []string{"hash", "nonce", "miner","pid","proof","signed"} {
 				response[field] = nil
 			}
 		}
@@ -824,7 +824,7 @@ func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, number rpc.B
 		response, err := s.rpcMarshalBlock(ctx, block, true, fullTx)
 		if err == nil && number == rpc.PendingBlockNumber {
 			// Pending blocks need to nil out a few fields
-			for _, field := range []string{"hash", "nonce", "miner"} {
+			for _, field := range []string{"hash", "nonce", "miner","pid","proof","signed"} {
 				response[field] = nil
 			}
 		}
@@ -1288,6 +1288,11 @@ func RPCMarshalHeader(head *types.Header, engine consensus.Engine) map[string]in
 		"timestamp":        hexutil.Uint64(head.Time),
 		"transactionsRoot": head.TxHash,
 		"receiptsRoot":     head.ReceiptHash,
+		"challenge":		head.Challenge,
+		"pid":				head.Pid,
+		"k":				hexutil.Uint64(head.K),
+		"proof":			hexutil.Bytes(head.Proof),
+		"Signed":           hexutil.Bytes(head.Signed),
 		"netCapacity":      hexutil.Uint64(head.NetCapacity),
 	}
 

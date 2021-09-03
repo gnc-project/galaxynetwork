@@ -17,19 +17,18 @@
 package core
 
 import (
-	"fmt"
 	"encoding/hex"
+	"fmt"
 	"math/big"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/trie"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rewardc"
-
+	"github.com/ethereum/go-ethereum/trie"
 )
 
 // BlockValidator is responsible for validating block headers, uncles and
@@ -129,6 +128,13 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 // otherwise nil and an error is returned.
 func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateDB, receipts types.Receipts, usedGas uint64) error {
 	header := block.Header()
+	//poc
+	if header.Number.Uint64() >= rewardc.PledgeNumber {
+		if !statedb.VerifyPid(header.Coinbase, header.Pid[:]) {
+			return fmt.Errorf("invalid pid=%v is not pledged address=%v", hex.EncodeToString(header.Pid[:]), header.Coinbase.Hex())
+		}
+	}
+
 	if block.GasUsed() != usedGas {
 		return fmt.Errorf("invalid gas used (remote: %d local: %d)", block.GasUsed(), usedGas)
 	}

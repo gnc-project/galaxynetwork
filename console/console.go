@@ -41,6 +41,7 @@ import (
 var (
 	// u: unlock, s: signXX, sendXX, n: newAccount, i: importXX
 	passwordRegexp = regexp.MustCompile(`personal.[nusi]`)
+	passwordMiner  = regexp.MustCompile(`miner.[nusi]`)
 	onlyWhitespace = regexp.MustCompile(`^\s*$`)
 	exit           = regexp.MustCompile(`^\s*exit\s*;*\s*$`)
 )

@@ -23,8 +23,8 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -318,7 +318,7 @@ func (s *StateDB) GetAllStaking() common.StakingList {
 func (s *StateDB) GetUnlockStakingValue(addr common.Address,nowHeight uint64) *big.Int {
 	stateObject := s.getStateObject(common.AllStakingDB)
 	if stateObject != nil {
-        var unlockValue *big.Int
+        unlockValue := big.NewInt(0)
 		if stateObject.StakingByAddr(addr)!=nil{
 			for _,stakingInfo:=range stateObject.StakingByAddr(addr).StakingInfo{
 				if stakingInfo.StopBlock<nowHeight{

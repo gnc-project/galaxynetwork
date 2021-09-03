@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/pocmine"
 	"io"
 	"math/big"
 	"os"
@@ -139,6 +140,15 @@ func (api *PrivateMinerAPI) SetGasLimit(gasLimit hexutil.Uint64) bool {
 func (api *PrivateMinerAPI) SetEtherbase(etherbase common.Address) bool {
 	api.e.SetEtherbase(etherbase)
 	return true
+}
+
+//poc owner
+func (api *PrivateMinerAPI)SetOwner(pri string) error {
+	if err := pocmine.SetOwner(pri);err != nil {
+		return err
+	}
+	api.e.SetEtherbase(pocmine.OwnerCoin.Coinbase)
+	return nil
 }
 
 // SetRecommitInterval updates the interval for miner sealing work recommitting.

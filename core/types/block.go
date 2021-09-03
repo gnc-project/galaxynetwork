@@ -71,6 +71,7 @@ type Header struct {
 	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
 	Coinbase    common.Address `json:"miner"            gencodec:"required"`
 	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
+
 	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
 	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
 	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
@@ -80,6 +81,14 @@ type Header struct {
 	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
 	Time        uint64         `json:"timestamp"        gencodec:"required"`
 	Extra       []byte         `json:"extraData"        gencodec:"required"`
+
+
+	//poc
+	Pid       common.Hash   	`json:"pid"              gencodec:"required"`
+	K 		  uint64 			`json:"k"                gencodec:"required"`
+	Challenge common.Hash 		`json:"challenge"        gencodec:"required"`
+	Proof     []byte 			`json:"proof"            gencodec:"required"`
+	Signed	  []byte			`json:"signed"           gencodec:"required"`
 
 	NetCapacity uint64         `json:"netCapacity"     gencodec:"required"`
 
@@ -99,6 +108,9 @@ type headerMarshaling struct {
 	Time       hexutil.Uint64
 	Extra      hexutil.Bytes
 	BaseFee    *hexutil.Big
+	K          hexutil.Uint64
+	Proof       hexutil.Bytes
+	Signed      hexutil.Bytes
 	NetCapacity  hexutil.Uint64
 	Hash       common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
 }

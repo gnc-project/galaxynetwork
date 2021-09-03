@@ -35,9 +35,9 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rewardc"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
-	"github.com/ethereum/go-ethereum/rewardc"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -65,6 +65,8 @@ type Genesis struct {
 	ParentHash common.Hash `json:"parentHash"`
 	NetCapacity uint64   `json:"netCapacity"`
 	BaseFee    *big.Int    `json:"baseFeePerGas"`
+
+	Challenge common.Hash `json:"challenge"               gencodec:"required"`
 }
 
 // GenesisAlloc specifies the initial state that is part of the genesis block.
@@ -102,6 +104,7 @@ type genesisSpecMarshaling struct {
 	Difficulty *math.HexOrDecimal256
 	BaseFee    *math.HexOrDecimal256
 	Alloc      map[common.UnprefixedAddress]GenesisAccount
+	NetCapacity math.HexOrDecimal64
 }
 
 type genesisAccountMarshaling struct {
@@ -287,6 +290,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 		MixDigest:  g.Mixhash,
 		Coinbase:   g.Coinbase,
 		Root:       root,
+		Challenge: g.Challenge,
 	}
 	if g.GasLimit == 0 {
 		head.GasLimit = params.GenesisGasLimit
@@ -300,6 +304,10 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 		} else {
 			head.BaseFee = new(big.Int).SetUint64(params.InitialBaseFee)
 		}
+	}
+	//poc
+	if g.Number != rewardc.GenesisNumber {
+		head.Number = big.NewInt(rewardc.GenesisNumber)
 	}
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true, nil)
@@ -363,7 +371,7 @@ func DefaultGenesisBlock() *Genesis {
 		Alloc:      decodePrealloc(mainnetAllocData),
 		NetCapacity:  0,
 		//poc
-		// Challenge: common.HexToHash("0x66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"),
+		Challenge: common.HexToHash("0x66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"),
 	}
 }
 
@@ -375,7 +383,7 @@ func DefaultRopstenGenesisBlock() *Genesis {
 		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
 		GasLimit:   16777216,
 		Difficulty: big.NewInt(1048576),
-		Alloc:      decodePrealloc(ropstenAllocData),
+		Alloc:      decodePrealloc(mainnetAllocData),
 	}
 }
 
@@ -387,7 +395,7 @@ func DefaultRinkebyGenesisBlock() *Genesis {
 		ExtraData:  hexutil.MustDecode("0x52657370656374206d7920617574686f7269746168207e452e436172746d616e42eb768f2244c8811c63729a21a3569731535f067ffc57839b00206d1ad20c69a1981b489f772031b279182d99e65703f0076e4812653aab85fca0f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
 		GasLimit:   4700000,
 		Difficulty: big.NewInt(1),
-		Alloc:      decodePrealloc(rinkebyAllocData),
+		Alloc:      decodePrealloc(mainnetAllocData),
 	}
 }
 
@@ -399,7 +407,7 @@ func DefaultGoerliGenesisBlock() *Genesis {
 		ExtraData:  hexutil.MustDecode("0x22466c6578692069732061207468696e6722202d204166726900000000000000e0a2bd4258d2768837baa26a28fe71dc079f84c70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
 		GasLimit:   10485760,
 		Difficulty: big.NewInt(1),
-		Alloc:      decodePrealloc(goerliAllocData),
+		Alloc:      decodePrealloc(mainnetAllocData),
 	}
 }
 

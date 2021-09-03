@@ -19,6 +19,8 @@ package les
 import (
 	"context"
 	"errors"
+	"github.com/ethereum/go-ethereum/pocmine"
+	"github.com/gnc-project/poc"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -45,6 +47,16 @@ type LesApiBackend struct {
 	eth                 *LightEthereum
 	gpo                 *gasprice.Oracle
 }
+
+//poc
+func (b *LesApiBackend) AddPlot(ctx context.Context, pid common.Hash, proof []byte, k int,difficulty *big.Int, number *big.Int, timestamp int64) (*pocmine.WorkPoc, error) {
+	return nil, nil
+}
+
+func (b *LesApiBackend) MinerInfo(ctx context.Context) (*poc.MinerInfo, error) {
+	return nil,nil
+}
+
 
 func (b *LesApiBackend) ChainConfig() *params.ChainConfig {
 	return b.eth.chainConfig

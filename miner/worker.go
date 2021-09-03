@@ -19,6 +19,8 @@ package miner
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"github.com/ethereum/go-ethereum/rewardc"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -617,6 +619,21 @@ func (w *worker) resultLoop() {
 				log.Error("Block found but no relative pending task", "number", block.Number(), "sealhash", sealhash, "hash", hash)
 				continue
 			}
+
+			//poc verify
+			if statedb, err := w.chain.State();err != nil {
+				log.Error("worker resultLoop","err",err)
+				continue
+			}else {
+				if block.Header().Number.Uint64() >= rewardc.PledgeNumber {
+					if !statedb.VerifyPid(block.Header().Coinbase, block.Header().Pid[:]) {
+						log.Error("worker resultLoop","err",fmt.Errorf("invalid pid=%v is not pledged address=%v",
+							block.Header().Pid.Hex(), block.Header().Coinbase.Hex()))
+						continue
+					}
+				}
+			}
+
 			// Different block could share same sealhash, deep copy here to prevent write-write conflict.
 			var (
 				receipts = make([]*types.Receipt, len(task.receipts))
@@ -637,6 +654,7 @@ func (w *worker) resultLoop() {
 				}
 				logs = append(logs, receipt.Logs...)
 			}
+
 			// Commit block and state to database.
 			_, err := w.chain.WriteBlockWithState(block, receipts, logs, task.state, true)
 			if err != nil {
@@ -918,10 +936,10 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		}
 		header.Coinbase = w.coinbase
 	}
-	if err := w.engine.Prepare(w.chain, header); err != nil {
-		log.Error("Failed to prepare header for mining", "err", err)
-		return
-	}
+	//if err := w.engine.Prepare(w.chain, header); err != nil {
+	//	log.Error("Failed to prepare header for mining", "err", err)
+	//	return
+	//}
 	// If we are care about TheDAO hard-fork check whether to override the extra-data or not
 	if daoBlock := w.chainConfig.DAOForkBlock; daoBlock != nil {
 		// Check whether the block is among the fork extra-override range

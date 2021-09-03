@@ -17,13 +17,18 @@
 package ethash
 
 import (
-	"bytes"
+	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/pocmine"
+	"github.com/ethereum/go-ethereum/pocmine/challenge"
+	"github.com/gnc-project/poc/difficulty"
 	"math/big"
 	"runtime"
-	"time"
 	"sort"
+	"time"
 
 	mapset "github.com/deckarep/golang-set"
 	"github.com/ethereum/go-ethereum/common"
@@ -33,17 +38,18 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rewardc"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
-	"github.com/ethereum/go-ethereum/rewardc"
+	"github.com/gnc-project/poc"
 	"golang.org/x/crypto/sha3"
 )
 
 // Ethash proof-of-work protocol constants.
 var (
-	FrontierBlockReward           = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
-	ByzantiumBlockReward          = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
-	ConstantinopleBlockReward     = big.NewInt(2e+18) // Block reward in wei for successfully mining a block upward from Constantinople
+	FrontierBlockReward       = rewardc.BlockReward // Block reward in wei for successfully mining a block
+	ByzantiumBlockReward      = rewardc.BlockReward // Block reward in wei for successfully mining a block upward from Byzantium
+	ConstantinopleBlockReward = rewardc.BlockReward // Block reward in wei for successfully mining a block upward from Constantinople
 	maxUncles                     = 2                 // Maximum number of uncles allowed in a single block
 	allowedFutureBlockTimeSeconds = int64(15)         // Max seconds from current time allowed for blocks, before they're considered future blocks
 
@@ -264,7 +270,7 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 	}
 	// Verify the header's timestamp
 	if !uncle {
-		if header.Time > uint64(unixNow+allowedFutureBlockTimeSeconds) {
+		if header.Time > uint64(unixNow+int64(rewardc.FutureBlockTime)) {
 			return consensus.ErrFutureBlock
 		}
 	}
@@ -272,7 +278,7 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 		return errOlderBlockTime
 	}
 	// Verify the block's difficulty based on its timestamp and parent's difficulty
-	expected := ethash.CalcDifficulty(chain, header.Time, parent)
+	expected := ethash.CalcDifficulty(header, parent)
 
 	if expected.Cmp(header.Difficulty) != 0 {
 		return fmt.Errorf("invalid difficulty: have %v, want %v", header.Difficulty, expected)
@@ -304,11 +310,15 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 		return consensus.ErrInvalidNumber
 	}
 	// Verify the engine specific seal securing the block
-	if seal {
-		if err := ethash.verifySeal(chain, header, false); err != nil {
-			return err
-		}
+
+	//poc
+	if err := ethash.verifyPoc(header,parent);err != nil {
+		return err
 	}
+	if err := ethash.verifySig(header);err != nil {
+		return err
+	}
+
 	// If all checks passed, validate any special fields for hard forks
 	if err := misc.VerifyDAOHeaderExtraData(chain.Config(), header); err != nil {
 		return err
@@ -322,32 +332,21 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 // CalcDifficulty is the difficulty adjustment algorithm. It returns
 // the difficulty that a new block should have when created at time
 // given the parent block's time and difficulty.
-func (ethash *Ethash) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
-	return CalcDifficulty(chain.Config(), time, parent)
+func (ethash *Ethash) CalcDifficulty(header, parent *types.Header) *big.Int {
+	return CalcDifficulty(header, parent)
 }
 
 // CalcDifficulty is the difficulty adjustment algorithm. It returns
 // the difficulty that a new block should have when created at time
 // given the parent block's time and difficulty.
-func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Header) *big.Int {
-	next := new(big.Int).Add(parent.Number, big1)
-	switch {
-	case config.IsCatalyst(next):
-		return big.NewInt(1)
-	case config.IsLondon(next):
-		return calcDifficultyEip3554(time, parent)
-	case config.IsMuirGlacier(next):
-		return calcDifficultyEip2384(time, parent)
-	case config.IsConstantinople(next):
-		return calcDifficultyConstantinople(time, parent)
-	case config.IsByzantium(next):
-		return calcDifficultyByzantium(time, parent)
-	case config.IsHomestead(next):
-		return calcDifficultyHomestead(time, parent)
-	default:
-		return calcDifficultyFrontier(time, parent)
-	}
+func CalcDifficulty(header, parent *types.Header) *big.Int {
+	// Ensure diff
+	lastTime := time.Unix(int64(parent.Time),0)
+	blockTime := time.Unix(int64(header.Time),0)
+	return difficulty.CalcNextRequiredDifficulty(lastTime,parent.Difficulty,blockTime)
 }
+
+
 
 // Some weird constants to avoid constant memory allocs for them.
 var (
@@ -513,65 +512,14 @@ var DynamicDifficultyCalculator = makeDifficultyCalculator
 // either using the usual ethash cache for it, or alternatively using a full DAG
 // to make remote mining fast.
 func (ethash *Ethash) verifySeal(chain consensus.ChainHeaderReader, header *types.Header, fulldag bool) error {
-	// If we're running a fake PoW, accept any seal as valid
-	if ethash.config.PowMode == ModeFake || ethash.config.PowMode == ModeFullFake {
-		time.Sleep(ethash.fakeDelay)
-		if ethash.fakeFail == header.Number.Uint64() {
-			return errInvalidPoW
-		}
-		return nil
-	}
-	// If we're running a shared PoW, delegate verification to it
-	if ethash.shared != nil {
-		return ethash.shared.verifySeal(chain, header, fulldag)
-	}
-	// Ensure that we have a valid difficulty for the block
-	if header.Difficulty.Sign() <= 0 {
-		return errInvalidDifficulty
-	}
-	// Recompute the digest and PoW values
-	number := header.Number.Uint64()
 
-	var (
-		digest []byte
-		result []byte
-	)
-	// If fast-but-heavy PoW verification was requested, use an ethash dataset
-	if fulldag {
-		dataset := ethash.dataset(number, true)
-		if dataset.generated() {
-			digest, result = hashimotoFull(dataset.dataset, ethash.SealHash(header).Bytes(), header.Nonce.Uint64())
+	if err := ethash.verifyPoc(header,chain.CurrentHeader());err != nil {
+		return err
+	}
+	if err := ethash.verifySig(header);err != nil {
+		return err
+	}
 
-			// Datasets are unmapped in a finalizer. Ensure that the dataset stays alive
-			// until after the call to hashimotoFull so it's not unmapped while being used.
-			runtime.KeepAlive(dataset)
-		} else {
-			// Dataset not yet generated, don't hang, use a cache instead
-			fulldag = false
-		}
-	}
-	// If slow-but-light PoW verification was requested (or DAG not yet ready), use an ethash cache
-	if !fulldag {
-		cache := ethash.cache(number)
-
-		size := datasetSize(number)
-		if ethash.config.PowMode == ModeTest {
-			size = 32 * 1024
-		}
-		digest, result = hashimotoLight(size, cache.cache, ethash.SealHash(header).Bytes(), header.Nonce.Uint64())
-
-		// Caches are unmapped in a finalizer. Ensure that the cache stays alive
-		// until after the call to hashimotoLight so it's not unmapped while being used.
-		runtime.KeepAlive(cache)
-	}
-	// Verify the calculated values against the ones provided in the header
-	if !bytes.Equal(header.MixDigest[:], digest) {
-		return errInvalidMixDigest
-	}
-	target := new(big.Int).Div(two256, header.Difficulty)
-	if new(big.Int).SetBytes(result).Cmp(target) > 0 {
-		return errInvalidPoW
-	}
 	return nil
 }
 
@@ -582,7 +530,7 @@ func (ethash *Ethash) Prepare(chain consensus.ChainHeaderReader, header *types.H
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
-	header.Difficulty = ethash.CalcDifficulty(chain, header.Time, parent)
+	header.Difficulty = ethash.CalcDifficulty(header, parent)
 	return nil
 }
 
@@ -590,7 +538,6 @@ func (ethash *Ethash) Prepare(chain consensus.ChainHeaderReader, header *types.H
 // setting the final state on the header
 func (ethash *Ethash) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header) {
 	// Accumulate any block and uncle rewards and commit the final state root
-	
 	accumulateRewards(chain, state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 }
@@ -617,11 +564,9 @@ func (ethash *Ethash) SealHash(header *types.Header) (hash common.Hash) {
 		header.TxHash,
 		header.ReceiptHash,
 		header.Bloom,
-		header.Difficulty,
 		header.Number,
 		header.GasLimit,
 		header.GasUsed,
-		header.Time,
 		header.Extra,
 	}
 	if header.BaseFee != nil {
@@ -642,6 +587,7 @@ var (
 // reward. The total reward consists of the static block reward and rewards for
 // included uncles. The coinbase of each uncle block is also rewarded.
 func accumulateRewards(chain consensus.ChainHeaderReader, state *state.StateDB, header *types.Header, uncles []*types.Header) {
+
 	// Skip block reward in catalyst mode
 	if chain.Config().IsCatalyst(header.Number) {
 		return
@@ -654,27 +600,155 @@ func accumulateRewards(chain consensus.ChainHeaderReader, state *state.StateDB, 
 
 	// Accumulate the rewards for the miner and any included uncles
 	for _, uncle := range uncles {
+		fmt.Println("header.uncle------------->",header.Coinbase)
 		state.AddBalance(uncle.Coinbase, big.NewInt(0))
 	}
+	fmt.Println("header.Coinbase------------->",header.Coinbase)
 	state.AddBalance(header.Coinbase, new(big.Int).Add(available, amountUnlocked))
-    
+
 	stakingList:=state.GetAllStakingList()
-    var index int
+	var index int
 	if len(stakingList)<50{
-        index=len(stakingList)
+		index=len(stakingList)
 	}else{
 		index=50
 	}
-    var allWeight=big.NewInt(0)
+	var allWeight=big.NewInt(0)
 	for i:=0;i<index;i++{
 		allWeight=new(big.Int).Add(allWeight,stakingList[i].TotalWeight)
 	}
 	for i:=0;i<index;i++{
 		address:=stakingList[i].Address
-		stakingReward:=	new(big.Int).Mul(new(big.Int).Div(reward,big.NewInt(100)),rewardc.StakingRewardProportion)	
-	    state.AddBalance(*address,new(big.Int).Div(new(big.Int).Mul(stakingReward,stakingList[i].TotalWeight),allWeight))
+		stakingReward:=	new(big.Int).Mul(new(big.Int).Div(reward,big.NewInt(100)),rewardc.StakingRewardProportion)
+		state.AddBalance(*address,new(big.Int).Div(new(big.Int).Mul(stakingReward,stakingList[i].TotalWeight),allWeight))
 	}
 }
+
+func (ethhash *Ethash) verifyPoc(header, parent *types.Header) error {
+
+	if err := ethhash.verifyHeaderTimestamp(header,parent); err != nil {
+		return err
+	}
+
+	if err := ethhash.verifyProofOfCapacity(header); err != nil {
+		return err
+	}
+
+	if err := ethhash.verifyDiff(header,parent); err != nil {
+		return err
+	}
+
+	if err := ethhash.verifyChallenge(header,parent); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ethhash *Ethash) verifySig(header *types.Header) error {
+
+	pub,err := crypto.Ecrecover(pocmine.ShaInput(header),header.Signed)
+	if err != nil {
+		return err
+	}
+	signatureNoRecoverID := header.Signed[:len(header.Signed)-1]
+	if !pocmine.Verify(pub,header,signatureNoRecoverID) {
+		return errors.New("sig is err")
+	}
+
+	return nil
+}
+
+func (ethhash *Ethash)verifyHeaderTimestamp(header,parent *types.Header) error {
+
+	if int64(header.Time) > time.Now().Unix() {
+		log.Error("block timestamp of unix is too far in the future",
+			"allowed",      time.Now().Unix(),
+			"timestamp_unix", header.Time,
+			"height",        header.Number,
+			"block",          header.Hash().Hex(),
+		)
+		return errors.New("block timestamp is too far in the future")
+	}
+
+	before := time.Unix(int64(parent.Time),0).Add(poc.PoCSlot * time.Second)
+	if int64(header.Time) < before.Unix() {
+		log.Error("block timestamp of unix is too near in the future","allowed")
+		return errors.New("block timestamp of unix is too near in the future")
+	}
+
+	return nil
+}
+
+func (ethhash *Ethash)verifyProofOfCapacity(header *types.Header) error {
+	// The Target difficulty must be larger than zero.
+	target := header.Difficulty
+	if target.Sign() <= 0 {
+		log.Error("block Target difficulty is too low", "target", target)
+		return errors.New("block difficulty is not the expected value")
+	}
+
+	// The Target difficulty must be less than the maximum allowed.
+	if target.Cmp(rewardc.MainPocLimit) < 0 {
+		log.Error("block Target difficulty is lower than min of pocLimit",
+			"target", target, "pocLimit", rewardc.MainPocLimit)
+		return errors.New("block difficulty is not the expected value")
+	}
+
+	slot := header.Time / poc.PoCSlot
+	quality,err := poc.VerifiedQuality(header.Proof,header.Pid,header.Challenge,slot,header.Number.Uint64(),header.K)
+	if err != nil {
+		return err
+	}
+
+	if quality.Cmp(target) <= 0 {
+		log.Error("block's proof quality is lower than expected min target",
+			"quality", quality, "expected", target, "height", header.Number, "hash", header.Hash().Hex())
+		return errors.New("block's proof quality is lower than expected min target")
+	}
+
+	return nil
+}
+
+func (ethash *Ethash)verifyDiff(header,parent *types.Header) error {
+
+	// Ensure diff
+	expectedDiff := ethash.CalcDifficulty(header,parent)
+	blockDifficulty := header.Difficulty
+	if blockDifficulty.Cmp(expectedDiff) != 0 {
+		log.Error("block difficulty is not the expected value",
+			"difficulty", blockDifficulty, "expectedTarget", expectedDiff)
+		return ErrUnexpectedDifficulty
+	}
+
+	return nil
+}
+
+func (ethash *Ethash)verifyChallenge(header,parent *types.Header) error  {
+
+	// Ensure the provided challenge in header is right.
+	// The calculated challenge based on some rules.
+	challenge := CalcNextChallenge(parent)
+	if ! (challenge.Hex() == header.Challenge.Hex()) {
+		log.Error("block challenge does not match the expected challenge",
+			"block challenge", header.Challenge, "blockHeight", header.Number, "expectedChallenge", challenge)
+		return ErrUnexpectedChallenge
+	}
+	return nil
+}
+
+func CalcNextChallenge(parent *types.Header) *common.Hash {
+
+	if parent.Number.Uint64() == rewardc.GenesisNumber {
+		hash := parent.Hash()
+		h := sha256.Sum256(hash[:])
+		nextHash := common.BytesToHash(h[:])
+		return &nextHash
+	}
+
+	return challenge.CalcNextChallenge(parent)
+}
+
 
 
 var (

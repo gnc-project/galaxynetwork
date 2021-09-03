@@ -479,7 +479,8 @@ func New(config Config, notify []string, noverify bool) *Ethash {
 	if config.PowMode == ModeShared {
 		ethash.shared = sharedEthash
 	}
-	ethash.remote = startRemoteSealer(ethash, notify, noverify)
+	//ethash.remote = startRemoteSealer(ethash, notify, noverify)
+	ethash.remote = nil
 	return ethash
 }
 
