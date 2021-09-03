@@ -1,6 +1,31 @@
-## Go Ethereum
+## GalaxyNetWork(GNC) based Go Ethereum v1.10.8
 
-Official Golang implementation of the Ethereum protocol.
+## Changes made:
+   * Consensus algorithm: (As reference) Chia Proof of Space Construction. 
+      https://www.chia.net/assets/Chia_Proof_of_Space_Construction_v1.1.pdf
+   * Geth v1.10.8 is a pre-announced hotfix release to patch a vulnerability in the EVM (CVE-2021-39137).
+   * Build implementation based Geth v1.10.8 version
+   * The address balance will be mapped to the mainnet
+   * Smart Contracts supported
+   * Economic model upgraded
+
+## Mining
+```shell
+                                       _____  miner 1 (reserved space)
+                                      /
+ GalaxyNetWork peers  --------   Geth Node peer  ------  miner 2 (reserved space)
+                                      \_____  miner 3 (reserved space)
+```
+
+\
+\
+\
+\
+\
+&NewLine;
+
+
+Official Golang implementation of the GalaxyNetWork protocol.
 
 [![API Reference](
 https://camo.githubusercontent.com/915b7be44ada53c290eb157634330494ebe3e30a/68747470733a2f2f676f646f632e6f72672f6769746875622e636f6d2f676f6c616e672f6764646f3f7374617475732e737667
@@ -10,7 +35,7 @@ https://camo.githubusercontent.com/915b7be44ada53c290eb157634330494ebe3e30a/6874
 [![Discord](https://img.shields.io/badge/discord-join%20chat-blue.svg)](https://discord.gg/nthXNEv)
 
 Automated builds are available for stable releases and the unstable master branch. Binary
-archives are published at https://geth.ethereum.org/downloads/.
+archives are published at https://github.com/gnc-project/go-ethereum.
 
 ## Building the source
 
