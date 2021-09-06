@@ -11,7 +11,7 @@ const (
 	MinimumDifficulty      = uint64(15000000000000000) // The minimum that the difficulty may ever be.
 	GenesisNumber          = 0
 	PledgeNumber           = GenesisNumber + 100
-    DayBlock               =3600/FutureBlockTime
+    DayBlock               =180/FutureBlockTime
 	GenesisTimestamp       =1630043179
 	MinSectorExpiration    = 180
 	ChainID					= 37021
