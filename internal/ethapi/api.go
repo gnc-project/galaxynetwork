@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/gnc-project/poc"
 	"math/big"
 	"strings"
 	"time"
@@ -64,6 +65,16 @@ func (b *PublicEthereumAPI) AddPlot(ctx context.Context, pid string, proof strin
 	pro, err := hexutil.Decode(proof)
 	if err != nil {
 		return nil, err
+	}
+
+	minerInfo,err := b.b.MinerInfo(ctx)
+	if err != nil {
+		return nil, err
+	}
+	_, errv := poc.VerifiedQuality(pro,id,common.HexToHash(minerInfo.Challenge),minerInfo.LastBlockTime/poc.PoCSlot,minerInfo.Number,uint64(k))
+	if errv != nil {
+		log.Error("poc verifiedQuality err","err",errv)
+		return nil, errv
 	}
 
 	workPoc, err := b.b.AddPlot(ctx, id,pro,k,difficulty, number,timestamp)
