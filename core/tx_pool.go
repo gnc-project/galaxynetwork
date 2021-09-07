@@ -37,7 +37,6 @@ import (
 	"github.com/gnc-project/galaxynetwork/metrics"
 	"github.com/gnc-project/galaxynetwork/params"
 	"github.com/gnc-project/galaxynetwork/rewardc"
-
 )
 
 const (
