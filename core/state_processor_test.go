@@ -23,14 +23,11 @@ import (
 	"github.com/gnc-project/galaxynetwork/common"
 	"github.com/gnc-project/galaxynetwork/consensus"
 	"github.com/gnc-project/galaxynetwork/consensus/ethash"
-	"github.com/gnc-project/galaxynetwork/consensus/misc"
 	"github.com/gnc-project/galaxynetwork/core/rawdb"
 	"github.com/gnc-project/galaxynetwork/core/types"
 	"github.com/gnc-project/galaxynetwork/core/vm"
 	"github.com/gnc-project/galaxynetwork/crypto"
 	"github.com/gnc-project/galaxynetwork/params"
-	"github.com/gnc-project/galaxynetwork/trie"
-	"golang.org/x/crypto/sha3"
 )
 
 // TestStateProcessorErrors tests the output from the 'core' errors
@@ -291,39 +288,40 @@ func TestStateProcessorErrors(t *testing.T) {
 // valid to be considered for import:
 // - valid pow (fake), ancestry, difficulty, gaslimit etc
 func GenerateBadBlock(parent *types.Block, engine consensus.Engine, txs types.Transactions, config *params.ChainConfig) *types.Block {
-	header := &types.Header{
-		ParentHash: parent.Hash(),
-		Coinbase:   parent.Coinbase(),
-		Difficulty: engine.CalcDifficulty(&fakeChainReader{config}, parent.Time()+10, &types.Header{
-			Number:     parent.Number(),
-			Time:       parent.Time(),
-			Difficulty: parent.Difficulty(),
-			UncleHash:  parent.UncleHash(),
-		}),
-		GasLimit:  parent.GasLimit(),
-		Number:    new(big.Int).Add(parent.Number(), common.Big1),
-		Time:      parent.Time() + 10,
-		UncleHash: types.EmptyUncleHash,
-	}
-	if config.IsLondon(header.Number) {
-		header.BaseFee = misc.CalcBaseFee(config, parent.Header())
-	}
-	var receipts []*types.Receipt
-	// The post-state result doesn't need to be correct (this is a bad block), but we do need something there
-	// Preferably something unique. So let's use a combo of blocknum + txhash
-	hasher := sha3.NewLegacyKeccak256()
-	hasher.Write(header.Number.Bytes())
-	var cumulativeGas uint64
-	for _, tx := range txs {
-		txh := tx.Hash()
-		hasher.Write(txh[:])
-		receipt := types.NewReceipt(nil, false, cumulativeGas+tx.Gas())
-		receipt.TxHash = tx.Hash()
-		receipt.GasUsed = tx.Gas()
-		receipts = append(receipts, receipt)
-		cumulativeGas += tx.Gas()
-	}
-	header.Root = common.BytesToHash(hasher.Sum(nil))
-	// Assemble and return the final block for sealing
-	return types.NewBlock(header, txs, nil, receipts, trie.NewStackTrie(nil))
+	//header := &types.Header{
+	//	ParentHash: parent.Hash(),
+	//	Coinbase:   parent.Coinbase(),
+	//	Difficulty: engine.CalcDifficulty(&fakeChainReader{config}, parent.Time()+10, &types.Header{
+	//		Number:     parent.Number(),
+	//		Time:       parent.Time(),
+	//		Difficulty: parent.Difficulty(),
+	//		UncleHash:  parent.UncleHash(),
+	//	}),
+	//	GasLimit:  parent.GasLimit(),
+	//	Number:    new(big.Int).Add(parent.Number(), common.Big1),
+	//	Time:      parent.Time() + 10,
+	//	UncleHash: types.EmptyUncleHash,
+	//}
+	//if config.IsLondon(header.Number) {
+	//	header.BaseFee = misc.CalcBaseFee(config, parent.Header())
+	//}
+	//var receipts []*types.Receipt
+	//// The post-state result doesn't need to be correct (this is a bad block), but we do need something there
+	//// Preferably something unique. So let's use a combo of blocknum + txhash
+	//hasher := sha3.NewLegacyKeccak256()
+	//hasher.Write(header.Number.Bytes())
+	//var cumulativeGas uint64
+	//for _, tx := range txs {
+	//	txh := tx.Hash()
+	//	hasher.Write(txh[:])
+	//	receipt := types.NewReceipt(nil, false, cumulativeGas+tx.Gas())
+	//	receipt.TxHash = tx.Hash()
+	//	receipt.GasUsed = tx.Gas()
+	//	receipts = append(receipts, receipt)
+	//	cumulativeGas += tx.Gas()
+	//}
+	//header.Root = common.BytesToHash(hasher.Sum(nil))
+	//// Assemble and return the final block for sealing
+	//return types.NewBlock(header, txs, nil, receipts, trie.NewStackTrie(nil))
+	return nil
 }

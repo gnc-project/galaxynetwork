@@ -80,7 +80,6 @@ func (ui *CommandlineUI) confirm() bool {
 	if ui.readString() == "y" {
 		return true
 	}
-	fmt.Println("-----------------------")
 	return false
 }
 

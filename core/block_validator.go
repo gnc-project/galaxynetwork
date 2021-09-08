@@ -79,9 +79,8 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	transactions := block.Transactions()
 	if len(transactions) > 0 {
 		for i := 0; i < len(transactions); i++ {
-			msg, err := transactions[i].AsMessage(types.NewLondonSigner(v.config.ChainID), nil)
+			msg, err := transactions[i].AsMessage(types.MakeSigner(v.config, header.Number), header.BaseFee)
 			if err != nil {
-				fmt.Println("------------------getFromErr-----------------------")
 				return fmt.Errorf("getFromErr :%v", err)
 			}
 			var snapdata []byte
