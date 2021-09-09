@@ -71,10 +71,12 @@ func (b *PublicEthereumAPI) AddPlot(ctx context.Context, pid string, proof strin
 	if err != nil {
 		return nil, err
 	}
-	_, errv := poc.VerifiedQuality(pro,id,common.HexToHash(minerInfo.Challenge),minerInfo.LastBlockTime/poc.PoCSlot,minerInfo.Number,uint64(k))
-	if errv != nil {
-		log.Error("poc verifiedQuality err","err",errv)
-		return nil, errv
+	bestQua, err := poc.VerifiedQuality(pro,id,common.HexToHash(minerInfo.Challenge),minerInfo.LastBlockTime/poc.PoCSlot,minerInfo.Number,uint64(k))
+	if err != nil {
+		log.Error("poc verifiedQuality err","pro",proof,"pid",pid,"k",k,"difficulty",difficulty,"commitNumber",number,"timestamp",timestamp,"bestQua",bestQua,
+			"challenge",minerInfo.Challenge,"minerNumber",minerInfo.Number,"lastBlockTime",minerInfo.LastBlockTime,"minerDifficulty",minerInfo.Difficulty,
+			"err",err)
+		return nil, err
 	}
 
 	workPoc, err := b.b.AddPlot(ctx, id,pro,k,difficulty, number,timestamp)
