@@ -68,6 +68,18 @@ func (b *EthAPIBackend) AddPlot(ctx context.Context, pid common.Hash, proof []by
 		return nil,fmt.Errorf("not the current commitNumber=%v, number=%v", commitNumber, number)
 	}
 
+	minerInfo,err := b.MinerInfo(ctx)
+	if err != nil {
+		return nil, err
+	}
+	bestQua, err := poc.VerifiedQuality(proof,pid,common.HexToHash(minerInfo.Challenge),minerInfo.LastBlockTime/poc.PoCSlot,minerInfo.Number,uint64(k))
+	if err != nil {
+		log.Error("poc verifiedQuality err","pro",proof,"pid",pid,"k",k,"difficulty",difficulty,"commitNumber",number,"timestamp",timestamp,"bestQua",bestQua,
+			"challenge",minerInfo.Challenge,"minerNumber",minerInfo.Number,"lastBlockTime",minerInfo.LastBlockTime,"minerDifficulty",minerInfo.Difficulty,
+			"err",err)
+		return nil, err
+	}
+
 	statedb, err := b.eth.blockchain.State()
 	if err != nil {
 		return nil, errors.New(err.Error())
