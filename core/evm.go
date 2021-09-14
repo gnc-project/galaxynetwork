@@ -17,21 +17,18 @@
 package core
 
 import (
+	"encoding/hex"
 	"math/big"
 	"strconv"
-	"encoding/hex"
-
 
 	"github.com/gnc-project/galaxynetwork/common"
-	"github.com/gnc-project/galaxynetwork/consensus"
-	"github.com/gnc-project/galaxynetwork/core/types"
-	"github.com/gnc-project/galaxynetwork/core/vm"
 	"github.com/gnc-project/galaxynetwork/common/hexutil"
-	"github.com/gnc-project/galaxynetwork/rewardc"
+	"github.com/gnc-project/galaxynetwork/consensus"
 	"github.com/gnc-project/galaxynetwork/consensus/ethash"
 	"github.com/gnc-project/galaxynetwork/core/state"
-
-
+	"github.com/gnc-project/galaxynetwork/core/types"
+	"github.com/gnc-project/galaxynetwork/core/vm"
+	"github.com/gnc-project/galaxynetwork/rewardc"
 )
 
 // ChainContext supports retrieving headers and consensus parameters from the
@@ -47,16 +44,17 @@ type ChainContext interface {
 // NewEVMBlockContext creates a new context for use in the EVM.
 func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common.Address) vm.BlockContext {
 	var (
-		// beneficiary common.Address
+		beneficiary common.Address
 		baseFee     *big.Int
 	)
 
-	// If we don't have an explicit author (i.e. not mining), extract from the header
-	// if author == nil {
-	// 	beneficiary, _ = chain.Engine().Author(header) // Ignore error, we're past header validation
-	// } else {
-	// 	beneficiary = *author
-	// }
+//	If we don't have an explicit author (i.e. not mining), extract from the header
+	if author == nil {
+		beneficiary, _ = chain.Engine().Author(header) // Ignore error, we're past header validation
+	} else {
+		beneficiary = *author
+	}
+
 	if header.BaseFee != nil {
 		baseFee = new(big.Int).Set(header.BaseFee)
 	}
@@ -71,7 +69,7 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 		StakingTransfer:      StakingTransfer,
 		UnlockStakingTransfer: UnlockStakingTransfer,
 		GetHash:              GetHashFn(header, chain),
-		//Coinbase:             beneficiary,
+		Coinbase:             beneficiary,
 		BlockNumber:          new(big.Int).Set(header.Number),
 		//Time:                 new(big.Int).SetUint64(header.Time),
 		//Difficulty:           new(big.Int).Set(header.Difficulty),

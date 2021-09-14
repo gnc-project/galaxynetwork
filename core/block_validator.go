@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 
 	"github.com/gnc-project/galaxynetwork/common/hexutil"
 	"github.com/gnc-project/galaxynetwork/consensus"
@@ -151,8 +152,12 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 	}
 	// Validate the state root against the received state root and throw
 	// an error if they don't match.
+	now := time.Now().Unix()
 	if root := statedb.IntermediateRoot(v.config.IsEIP158(header.Number)); header.Root != root {
 		return fmt.Errorf("invalid merkle root (remote: %x local: %x)", header.Root, root)
+	}
+	if time.Now().Unix()-now > 10 {
+		fmt.Println("elapsedTime",time.Now().Unix()-now)
 	}
 	return nil
 }
