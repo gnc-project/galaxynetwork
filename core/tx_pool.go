@@ -19,6 +19,7 @@ package core
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
 	"sort"
@@ -676,6 +677,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 			redeemAmount:=pool.currentState.GetRedeemAmount(from,pool.chain.CurrentBlock().NumberU64())
 			
 			if redeemAmount.Cmp(tx.Value())<0{
+				fmt.Println("addr",from.Hex(),"redeemAmount.Cmp(tx.Value())","redeemAmount",redeemAmount,"tx.Value",tx.Value())
 				return ErrInsufficientRedeem1
 			}
 		}

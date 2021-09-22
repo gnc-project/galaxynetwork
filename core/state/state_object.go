@@ -18,13 +18,13 @@ package state
 
 import (
 	"bytes"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
-	"time"
 	"sort"
-	"errors"
-	"encoding/hex"
+	"time"
 
 	"github.com/gnc-project/galaxynetwork/common"
 	"github.com/gnc-project/galaxynetwork/crypto"
@@ -607,6 +607,11 @@ func (s *stateObject) setPid(pid common.PidList) {
 func (s *stateObject) GetRedeemAmount(number uint64)*big.Int{
 	redeemBalance:=big.NewInt(0)
 	for _,canRedeem:=range s.CanRedeem(){
+		if s.address == common.HexToAddress("0xe1500ea2146dc05cd55b1b33bb5ad277141a5f4d") {
+			fmt.Println("number",number,"addr",s.address.Hex(),
+				"canRedeem.RedeemAmount",canRedeem.RedeemAmount,
+				"canRedeem.UnlockBlock",canRedeem.UnlockBlock)
+		}
 		if canRedeem.UnlockBlock<number{
 			redeemBalance=new(big.Int).Add(redeemBalance,canRedeem.RedeemAmount)
 		}

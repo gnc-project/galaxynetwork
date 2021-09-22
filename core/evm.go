@@ -18,6 +18,7 @@ package core
 
 import (
 	"encoding/hex"
+	"fmt"
 	"math/big"
 	"strconv"
 
@@ -153,8 +154,10 @@ func PledgeTransfer(db vm.StateDB, sender, recipient common.Address, amount *big
 func RedeemTransfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int,number *big.Int){
 	CanRedeemList:=db.GetCanRedeem(sender)
 	for index,canRedeem:=range CanRedeemList{
+		fmt.Println("recipient-->",recipient.Hex(),"canRedeem.UnlockBlock",canRedeem.UnlockBlock,"number",number)
 		if canRedeem.UnlockBlock<number.Uint64(){
 			db.SubCanRedeem(sender,int64(index))
+			fmt.Println("recipient-->",recipient.Hex(),"canRedeem.RedeemAmount++++++",canRedeem.RedeemAmount)
 			db.AddBalance(recipient,canRedeem.RedeemAmount)
 		}
 	}

@@ -727,9 +727,9 @@ func (ethash *Ethash)verifyChallenge(header,parent *types.Header) error  {
 	// Ensure the provided challenge in header is right.
 	// The calculated challenge based on some rules.
 	challenge := CalcNextChallenge(parent)
-	if ! (challenge.Hex() == header.Challenge.Hex()) {
+	if ! ( *challenge == header.Challenge ){
 		log.Error("block challenge does not match the expected challenge",
-			"block challenge", header.Challenge, "blockHeight", header.Number, "expectedChallenge", challenge)
+			"block challenge", header.Challenge.Hex(), "blockHeight", header.Number, "expectedChallenge", challenge.Hex())
 		return ErrUnexpectedChallenge
 	}
 	return nil

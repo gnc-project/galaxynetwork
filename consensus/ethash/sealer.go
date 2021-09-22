@@ -176,7 +176,15 @@ search:
 				headerTmp.Proof = workPoc.Proof
 				headerTmp.Pid  = workPoc.Pid
 				headerTmp.K   = uint64(workPoc.K)
-				headerTmp.Challenge = *CalcNextChallenge(chain.CurrentHeader())
+
+				parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+				if parent == nil {
+					log.Error("sealer diff failed, parent is nil")
+					ge.Delete(key)
+					return true
+				}
+				headerTmp.Challenge = *CalcNextChallenge(parent)
+
 				if err := ethash.Prepare(chain,headerTmp); err != nil {
 					log.Error("sealer diff failed","err",err.Error())
 					ge.Delete(key)
