@@ -18,12 +18,10 @@
 package state
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/gnc-project/galaxynetwork/common"
@@ -263,93 +261,6 @@ func (s *StateDB) GetBalance(addr common.Address) *big.Int {
 	return common.Big0
 }
 
-func (s *StateDB) GetTotalLockedFunds(addr common.Address) *big.Int {
-	stateObject := s.getStateObject(addr)
-	if stateObject != nil {
-		return stateObject.TotalLockedFunds()
-	}
-
-	return common.Big0
-}
-
-func (s *StateDB) GetFunds(addr common.Address) []struct {
-	BlockNumber *big.Int
-	Amount      *big.Int
-} {
-	stateObject := s.getStateObject(addr)
-	if stateObject != nil {
-		return stateObject.Funds()
-	}
-	return nil
-}
-
-func (s *StateDB) GetAllPledgeAmount(addr common.Address) *big.Int {
-	stateObject := s.getStateObject(addr)
-	if stateObject != nil {
-		return stateObject.Pledge()
-	}
-	return common.Big0
-}
-
-func (s *StateDB) GetRedeemAmount(addr common.Address,number uint64) *big.Int{
-	stateObject := s.getStateObject(addr)
-	if stateObject != nil {
-		return stateObject.GetRedeemAmount(number)
-	}
-	return common.Big0
-}
-
-func (s *StateDB) GetStakingByAddr(addr common.Address) *common.Staking {
-	stateObject := s.getStateObject(common.AllStakingDB)
-	if stateObject != nil {
-		return stateObject.StakingByAddr(addr)
-	}
-	return nil
-}
-
-func (s *StateDB) GetAllStaking() common.StakingList {
-	stateObject := s.getStateObject(common.AllStakingDB)
-	if stateObject != nil {
-		return stateObject.AllStaking()
-	}
-	return nil
-}
-
-func (s *StateDB) GetUnlockStakingValue(addr common.Address,nowHeight uint64) *big.Int {
-	stateObject := s.getStateObject(common.AllStakingDB)
-	if stateObject != nil {
-        unlockValue := big.NewInt(0)
-		if stateObject.StakingByAddr(addr)!=nil{
-			for _,stakingInfo:=range stateObject.StakingByAddr(addr).StakingInfo{
-				if stakingInfo.StopBlock<nowHeight{
-					unlockValue=new(big.Int).Add(unlockValue,stakingInfo.Value)
-				}
-			}
-			return unlockValue
-		}
-		return common.Big0
-	}
-	return common.Big0
-}
-
-
-
-func (s *StateDB) VerifyPid(addr common.Address, pidHex []byte) bool {
-	if len(pidHex)!=32{
-		return false
-	}
-	stateObject := s.getStateObject(addr)
-	if stateObject != nil {
-			for _,pid:=range stateObject.Pid(){
-				if strings.EqualFold(hex.EncodeToString(pidHex),pid.PidHex){
-					return true
-				}
-			}
-			return false
-	}
-	return false
-}
-
 func (s *StateDB) GetNonce(addr common.Address) uint64 {
 	stateObject := s.getStateObject(addr)
 	if stateObject != nil {
@@ -481,141 +392,6 @@ func (s *StateDB) SetBalance(addr common.Address, amount *big.Int) {
 	}
 }
 
-func (s *StateDB) SetFunds(addr common.Address, funds []struct {
-	BlockNumber *big.Int
-	Amount      *big.Int
-}) {
-	stateObject := s.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.SetFunds(funds)
-	}
-}
-
-// AddPledge adds amount to the account associated with addr.
-func (s *StateDB) AddPledge(addr common.Address, amount *big.Int) {
-	stateObject := s.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.AddPledge(amount)
-	}
-}
-
-// SubPledge subtracts amount from the account associated with addr.
-func (s *StateDB) SubPledge(addr common.Address, amount *big.Int) {
-	stateObject := s.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.SubPledge(amount)
-	}
-}
-func (s *StateDB) SetPledgee(addr common.Address, amount *big.Int) {
-	stateObject := s.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.SetPledge(amount)
-	}
-}
-
-func (s *StateDB) AddTotalLockedFunds(addr common.Address, amount *big.Int) {
-	stateObject := s.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.AddTotalLockedFunds(amount)
-	}
-}
-
-// SubPledge subtracts amount from the account associated with addr.
-func (s *StateDB) SubTotalLockedFunds(addr common.Address, amount *big.Int) {
-	stateObject := s.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.SubTotalLockedFunds(amount)
-	}
-}
-func (s *StateDB) SetTotalLockedFunds(addr common.Address, amount *big.Int) {
-	stateObject := s.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.SetTotalLockedFunds(amount)
-	}
-}
-
-func (s *StateDB) AddPid(addr common.Address, pidHex []byte,amount *big.Int) {
-	stateObject := s.GetOrNewStateObject(addr)
-
-	if stateObject != nil {
-		stateObject.AddPid(pidHex,amount)
-	}
-}
-
-func (s *StateDB) SubPid(addr common.Address,pidHex []byte)*big.Int{
-	stateObject := s.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		return stateObject.SubPid(pidHex)
-	}
-	return common.Big0
-}
-
-
-func (s *StateDB) SetPid(addr common.Address, pidHex []byte,amount *big.Int) {
-	stateObject := s.GetOrNewStateObject(addr)
-
-	if stateObject != nil {
-
-		stateObject.SetPid(pidHex,amount)
-	}
-}
-
-func (s *StateDB) GetPid(addr common.Address) common.PidList{
-	stateObject := s.GetOrNewStateObject(addr)
-
-	if stateObject != nil {
-
-		return stateObject.Pid()
-	}
-	return common.PidList{}
-}
-
-func (s *StateDB) AddStakingList(addr common.Address,addStaking *common.Staking) {
-	stateObject := s.GetOrNewStateObject(common.AllStakingDB)
-
-	if stateObject != nil {
-		stateObject.AddStakingList(addr,addStaking)
-	}
-}
-
-func (s *StateDB) SubStakingList(addr common.Address,nowHeight uint64) {
-	stateObject := s.GetOrNewStateObject(common.AllStakingDB)
-
-	if stateObject != nil {
-		stateObject.SubStakingList(addr,nowHeight)
-	}
-}
-func (s *StateDB) GetAllStakingList() common.StakingList{
-	stateObject := s.GetOrNewStateObject(common.AllStakingDB)
-	if stateObject != nil {
-		return stateObject.AllStaking()
-	}
-	return nil
-}
-
-func (s *StateDB) AddCanRedeem(addr common.Address, number uint64,amount *big.Int) {
-	stateObject := s.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.AddCanRedeem(number,amount)
-	}
-}
-
-func (s *StateDB) SubCanRedeem(addr common.Address,index int64) {
-	stateObject := s.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.SubCanRedeem(index)
-	}
-}
-
-func (s *StateDB) GetCanRedeem(addr common.Address) common.CanRedeemList {
-	stateObject := s.getStateObject(addr)
-	if stateObject != nil {
-		return stateObject.CanRedeem()
-	}
-
-	return common.CanRedeemList{}
-}
-
 func (s *StateDB) SetNonce(addr common.Address, nonce uint64) {
 	stateObject := s.GetOrNewStateObject(addr)
 	if stateObject != nil {
@@ -693,7 +469,9 @@ func (s *StateDB) updateStateObject(obj *stateObject) {
 	// enough to track account updates at commit time, deletions need tracking
 	// at transaction boundary level to ensure we capture state clearing.
 	if s.snap != nil {
-		s.snapAccounts[obj.addrHash] = snapshot.SlimAccountRLP(obj.data.Nonce, obj.data.Balance, obj.data.Root, obj.data.CodeHash, obj.data.TotalLockedFunds, obj.data.Pledge, obj.data.Funds, obj.data.Pid,obj.data.Staking,obj.data.CanRedeem)
+		s.snapAccounts[obj.addrHash] = snapshot.SlimAccountRLP(obj.data.Nonce, obj.data.Balance, obj.data.Root, obj.data.CodeHash,
+			obj.data.TotalLockedFunds, obj.data.Funds,obj.data.Staking,obj.data.CanRedeem,
+			obj.data.Binding,obj.data.PledgedAmount,obj.data.TotalPledgedAmount,obj.data.TotalCapacity)
 	}
 }
 
@@ -749,11 +527,12 @@ func (s *StateDB) getDeletedStateObject(addr common.Address) *stateObject {
 				CodeHash:         acc.CodeHash,
 				Root:             common.BytesToHash(acc.Root),
 				TotalLockedFunds: acc.TotalLockedFunds,
-				Pledge:           acc.Pledge,
 				CanRedeem:        acc.CanRedeem,
-				Pid: 			  acc.Pid,
 				Funds:            acc.Funds,
 				Staking:          acc.Staking,
+				Binding: 		  acc.Binding,
+				PledgedAmount:    acc.PledgedAmount,
+				TotalPledgedAmount: acc.TotalLockedFunds,
 			}
 			if len(data.CodeHash) == 0 {
 				data.CodeHash = emptyCodeHash
@@ -1259,26 +1038,261 @@ func (s *StateDB) SlotInAccessList(addr common.Address, slot common.Hash) (addre
 	return s.accessList.Contains(addr, slot)
 }
 
-func Zero() *big.Int {
-	return big.NewInt(0)
+
+
+
+
+
+
+
+
+
+
+
+
+
+func (s *StateDB) GetFunds(addr common.Address) common.MinedBlocks {
+	stateObject := s.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.Funds()
+	}
+	return nil
 }
 
-func (self *StateDB) UnlockVestedFunds(num *big.Int, addr common.Address) *big.Int {
-	amountUnlocked := Zero()
+
+func (s *StateDB) GetStakingByAddr(addr common.Address) *common.Staking {
+	stateObject := s.getStateObject(common.AllStakingDB)
+	if stateObject != nil {
+		return stateObject.StakingByAddr(addr)
+	}
+	return nil
+}
+
+func (s *StateDB) GetAllStaking() common.StakingList {
+	stateObject := s.getStateObject(common.AllStakingDB)
+	if stateObject != nil {
+		return stateObject.AllStaking()
+	}
+	return nil
+}
+
+
+func (s *StateDB) VerifyPid(pidAdr common.Address, addr common.Address) bool {
+	stateObject := s.getStateObject(pidAdr)
+	if stateObject != nil {
+		if stateObject.PledgeAmount().Cmp(common.Big0) > 0 {
+			if addr == stateObject.Binding() {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+
+func (s *StateDB) AddTotalLockedFunds(addr common.Address, amount *big.Int) {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.AddTotalLockedFunds(amount)
+	}
+}
+
+func (s *StateDB)PledgeBinding(pidAdr common.Address, addr common.Address) {
+	stateObject := s.GetOrNewStateObject(pidAdr)
+	if stateObject != nil {
+		stateObject.SetBinding(addr)
+	}
+}
+
+func (s *StateDB)DeleteBinding(pidAdr common.Address) {
+	stateObject := s.GetOrNewStateObject(pidAdr)
+	if stateObject != nil {
+		stateObject.SetBinding(common.Address{})
+	}
+}
+
+func (s *StateDB)GetPledgeAmount(pidAdr common.Address, addr common.Address) *big.Int{
+	stateObject := s.GetOrNewStateObject(pidAdr)
+	if stateObject != nil {
+		if stateObject.Binding() == addr {
+			return stateObject.PledgeAmount()
+		}
+	}
+	return common.Big0
+}
+
+func (s *StateDB)SetPledgeAmount(pidAdr common.Address, amount *big.Int)  {
+	stateObject := s.GetOrNewStateObject(pidAdr)
+	if stateObject != nil {
+		stateObject.SetPledgeAmount(amount)
+	}
+}
+
+func (s *StateDB)AddTotalPledgeAmount(addr common.Address, amount *big.Int)  {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.AddTotalPledgeAmount(amount)
+	}
+}
+
+func (s *StateDB)SubTotalPledgeAmount(addr common.Address, amount *big.Int) {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SubTotalPledgeAmount(amount)
+	}
+}
+
+func (s *StateDB)GetTotalPledgeAmount(addr common.Address) *big.Int  {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		return stateObject.TotalPledgeAmount()
+	}
+	return common.Big0
+}
+
+func (s *StateDB)AddTotalCapacity(addr common.Address,cap *big.Int)  {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.AddTotalCapacity(cap)
+	}
+}
+
+func (s *StateDB)SubTotalCapacity(addr common.Address,cap *big.Int)  {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SubTotalCapacity(cap)
+	}
+}
+
+func (s *StateDB)GetTotalCapacity(addr common.Address) *big.Int  {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		return stateObject.TotalCapacity()
+	}
+	return common.Big0
+}
+
+func (s *StateDB) SetTotalLockedFunds(addr common.Address, amount *big.Int) {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetTotalLockedFunds(amount)
+	}
+}
+
+// SubPledge subtracts amount from the account associated with addr.
+func (s *StateDB) SubTotalLockedFunds(addr common.Address, amount *big.Int) {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SubTotalLockedFunds(amount)
+	}
+}
+
+func (s *StateDB) GetTotalLockedFunds(addr common.Address) *big.Int {
+	stateObject := s.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.TotalLockedFunds()
+	}
+
+	return common.Big0
+}
+
+func (s *StateDB) SetFunds(addr common.Address, funds common.MinedBlocks) {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetFunds(funds)
+	}
+}
+
+func (s *StateDB) AddCanRedeem(addr common.Address, number uint64,amount *big.Int) {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.AddCanRedeem(number,amount)
+	}
+}
+
+
+func (s *StateDB) SubCanRedeem(addr common.Address,index int64) {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SubCanRedeem(index)
+	}
+}
+
+
+
+func (s *StateDB) GetCanRedeem(addr common.Address) common.CanRedeemList {
+	stateObject := s.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.CanRedeem()
+	}
+
+	return common.CanRedeemList{}
+}
+
+func (s *StateDB) GetRedeemAmount(addr common.Address,number uint64) *big.Int{
+	stateObject := s.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.GetRedeemAmount(number)
+	}
+	return common.Big0
+}
+
+
+func (s *StateDB) GetUnlockStakingValue(addr common.Address,nowHeight uint64) *big.Int {
+	stateObject := s.getStateObject(common.AllStakingDB)
+	if stateObject != nil {
+		unlockValue := big.NewInt(0)
+		if stateObject.StakingByAddr(addr)!=nil{
+			for _,stakingInfo:=range stateObject.StakingByAddr(addr).StakingInfo{
+				if stakingInfo.StopBlock<nowHeight{
+					unlockValue=new(big.Int).Add(unlockValue,stakingInfo.Value)
+				}
+			}
+			return unlockValue
+		}
+		return common.Big0
+	}
+	return common.Big0
+}
+
+func (s *StateDB) AddStakingList(addr common.Address,addStaking *common.Staking) {
+	stateObject := s.GetOrNewStateObject(common.AllStakingDB)
+
+	if stateObject != nil {
+		stateObject.AddStakingList(addr,addStaking)
+	}
+}
+
+func (s *StateDB) SubStakingList(addr common.Address,nowHeight uint64) {
+	stateObject := s.GetOrNewStateObject(common.AllStakingDB)
+
+	if stateObject != nil {
+		stateObject.SubStakingList(addr,nowHeight)
+	}
+}
+func (s *StateDB) GetAllStakingList() common.StakingList{
+	stateObject := s.GetOrNewStateObject(common.AllStakingDB)
+	if stateObject != nil {
+		return stateObject.AllStaking()
+	}
+	return nil
+}
+
+
+func (s *StateDB) UnlockVestedFunds(num *big.Int, addr common.Address) *big.Int {
+	amountUnlocked := common.Big0
 
 	lastIndexToRemove := -1
-	for i, vf := range self.GetFunds(addr) {
+	for i, vf := range s.GetFunds(addr) {
 		if vf.BlockNumber.Cmp(num) >= 0 {
 			break
 		}
-
 		amountUnlocked.Add(amountUnlocked, vf.Amount)
 		lastIndexToRemove = i
 	}
 
 	if lastIndexToRemove != -1 {
-		self.SetFunds(addr, self.GetFunds(addr)[lastIndexToRemove+1:])
-
+		s.SetFunds(addr, s.GetFunds(addr)[lastIndexToRemove+1:])
 	}
 
 	return amountUnlocked

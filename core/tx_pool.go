@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/gnc-project/galaxynetwork/common"
-	"github.com/gnc-project/galaxynetwork/common/hexutil"
 	"github.com/gnc-project/galaxynetwork/common/prque"
 	"github.com/gnc-project/galaxynetwork/consensus/misc"
 	"github.com/gnc-project/galaxynetwork/core/state"
@@ -637,21 +636,37 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		snapdata = tx.Data()
 	}
 
+	if total := new(big.Int).Mul(tx.GasPrice(), new(big.Int).SetUint64(tx.Gas()));pool.currentState.GetBalance(from).Cmp(total)<0{
+		return ErrInsufficientGas
+	}
 
-	
-    if len(snapdata) > 6 {
-		if pool.currentState.GetBalance(from).Cmp(tx.Cost()) <0&&!strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("redeem")))&&!strings.EqualFold(hex.EncodeToString(snapdata),hex.EncodeToString([]byte("unlockStaking"))){
+	if len(snapdata) < 6 {
+		if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0{
 			return ErrInsufficientFunds
 		}
+	}
+
+    if len(snapdata) >= 6 {
+
+		if  !strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("redeem"))) &&
+			!strings.EqualFold(hex.EncodeToString(snapdata),hex.EncodeToString([]byte("unlockStaking"))) {
+
+			if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0{
+				return ErrInsufficientFunds
+			}
+		}
+
 		if strings.EqualFold(hex.EncodeToString(snapdata[:6]), hex.EncodeToString([]byte("pledge"))) {
 
-			pidData := hexutil.SlitData(snapdata)
-			for _,pidHex:=range pidData{
-				if pool.currentState.VerifyPid(from,pidHex){
-					return errors.New("Duplicate pledged pid")
-				}
+			if pool.currentState.VerifyPid(*tx.To(),from){
+				return errors.New("Duplicate pledged pid")
 			}
-			currentNetCapacity:=pool.chain.GetBlock(pool.chain.CurrentBlock().ParentHash(),pool.chain.CurrentBlock().NumberU64()-1).NetCapacity()/1048576
+
+			currentNetCapacity := uint64(0)
+			if pool.chain.CurrentBlock().NumberU64() > 0 {
+				currentNetCapacity = pool.chain.GetBlock(pool.chain.CurrentBlock().ParentHash(),pool.chain.CurrentBlock().NumberU64()-1).NetCapacity()/1048576
+			}
+
 			switch{
 			case currentNetCapacity<100:
 				currentNetCapacity=1
@@ -664,27 +679,26 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 			default :
 				currentNetCapacity=300
 			}
-			pledgeValue := new(big.Int).Mul(new(big.Int).SetInt64(int64(len(pidData))), new(big.Int).Div(rewardc.PledgeBase[currentNetCapacity*100],big.NewInt(10)))
-			if tx.Value().Cmp(pledgeValue) < 0 || pool.currentState.GetBalance(from).Cmp(pledgeValue) < 0 {
+
+			pledgeValue :=  new(big.Int).Div(rewardc.PledgeBase[currentNetCapacity*100],big.NewInt(10))
+			if tx.Value().Cmp(pledgeValue) != 0 || pool.currentState.GetBalance(from).Cmp(pledgeValue) < 0 {
+				fmt.Println("pledgeValue",pledgeValue,"tx.Value",tx.Value())
 				return ErrInsufficientPledge
 			}
 		}
+
 		if strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("redeem"))){
- 
-			if total := new(big.Int).Mul(tx.GasPrice(), new(big.Int).SetUint64(tx.Gas()));pool.currentState.GetBalance(from).Cmp(total)<0{
-				return ErrInsufficientGas
-			}
-			redeemAmount:=pool.currentState.GetRedeemAmount(from,pool.chain.CurrentBlock().NumberU64())
+
+			redeemAmount := pool.currentState.GetRedeemAmount(from,pool.chain.CurrentBlock().NumberU64())
 			
 			if redeemAmount.Cmp(tx.Value())<0{
-				fmt.Println("addr",from.Hex(),"redeemAmount.Cmp(tx.Value())","redeemAmount",redeemAmount,"tx.Value",tx.Value())
+
 				return ErrInsufficientRedeem1
 			}
 		}
+
 		if strings.EqualFold(hex.EncodeToString(snapdata), hex.EncodeToString([]byte("unlockStaking"))){
-			if total := new(big.Int).Mul(tx.GasPrice(), new(big.Int).SetUint64(tx.Gas()));pool.currentState.GetBalance(from).Cmp(total)<0{
-				return ErrInsufficientGas
-			}
+
 			unlockValue:=pool.currentState.GetUnlockStakingValue(from,pool.chain.CurrentBlock().Number().Uint64())
 			
 			if tx.Value().Cmp(unlockValue)!=0{
@@ -693,29 +707,21 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		}
 	
 		if strings.EqualFold(hex.EncodeToString(snapdata), hex.EncodeToString([]byte("unlockReward"))){
-			if total := new(big.Int).Mul(tx.GasPrice(), new(big.Int).SetUint64(tx.Gas()));pool.currentState.GetBalance(from).Cmp(total)<0{
-				return ErrInsufficientGas
-			}
-			unlockValue:=pool.currentState.UnlockVestedFunds(pool.chain.CurrentBlock().Number(),from)
+
+			unlockValue := pool.currentState.UnlockVestedFunds(pool.chain.CurrentBlock().Number(),from)
 			
 			if tx.Value().Cmp(unlockValue)!=0{
 				return ErrInsufficientUnlockRewardValue
 			}	
 		}
-		if len(snapdata) > 7&&strings.EqualFold(hex.EncodeToString(snapdata[:7]), hex.EncodeToString([]byte("staking"))){
+		if len(snapdata) > 7 && strings.EqualFold(hex.EncodeToString(snapdata[:7]), hex.EncodeToString([]byte("staking"))){
+
 			if tx.Value().Cmp(rewardc.StakingLowerLimit)<0{
 				return ErrInsufficientStakingValue
 			}
-			
-			if pool.currentState.GetBalance(from).Cmp(tx.Cost()) <0{
-				return ErrInsufficientFunds
-			}	
-		}
-	}else{
-		if pool.currentState.GetBalance(from).Cmp(tx.Cost()) <0{
-			return ErrInsufficientFunds
 		}
 	}
+
 	// Ensure the transaction has more gas than the basic tx fee.
 	intrGas, err := IntrinsicGas(tx.Data(), tx.AccessList(), tx.To() == nil, true, pool.istanbul)
 	if err != nil {

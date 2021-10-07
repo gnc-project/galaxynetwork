@@ -18,8 +18,6 @@ package state
 
 import (
 	"bytes"
-	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -108,48 +106,65 @@ type Account struct {
 	Balance  *big.Int
 	Root     common.Hash // merkle root of the storage trie
 	CodeHash []byte
-	TotalLockedFunds *big.Int //lock coinbase
-	Pledge *big.Int //Balance of miners pledged
-	CanRedeem common.CanRedeemList
-	Funds []struct {
-		BlockNumber *big.Int
-		Amount      *big.Int
-	} //Balance of miners Fund by BlockNumber
 
-	Pid   common.PidList
+	TotalLockedFunds *big.Int //lock coinbase
+	Funds common.MinedBlocks //Balance of miners Fund by BlockNumber
+
 	Staking common.StakingList
+
+	CanRedeem common.CanRedeemList
+
+	Binding		common.Address
+	PledgedAmount *big.Int //Balance of miners pledged
+	TotalPledgedAmount *big.Int //total pledged
+	TotalCapacity	*big.Int
 }
 
 // newObject creates a state object.
 func newObject(db *StateDB, address common.Address, data Account) *stateObject {
+
 	if data.Balance == nil {
 		data.Balance = new(big.Int)
 	}
 
-	if data.Pledge == nil {
-		data.Pledge = new(big.Int)
+	if data.Root == (common.Hash{}) {
+		data.Root = emptyRoot
 	}
 
-	if data.CanRedeem == nil {
-		data.CanRedeem =common.CanRedeemList{}
+	if data.CodeHash == nil {
+		data.CodeHash = emptyCodeHash
 	}
 
 	if data.TotalLockedFunds == nil {
 		data.TotalLockedFunds = new(big.Int)
 	}
-	if data.CodeHash == nil {
-		data.CodeHash = emptyCodeHash
-	}
-	if data.Root == (common.Hash{}) {
-		data.Root = emptyRoot
+
+	if data.PledgedAmount == nil {
+		data.PledgedAmount = new(big.Int)
 	}
 
-	if data.Pid == nil{
-	   data.Pid=common.PidList{}
+	if data.CanRedeem == nil {
+		data.CanRedeem = common.CanRedeemList{}
+	}
+
+	if data.Funds == nil {
+		data.Funds = common.MinedBlocks{}
 	}
 
     if data.Staking==nil{
-		data.Staking=common.StakingList{}
+		data.Staking = common.StakingList{}
+	}
+
+	if data.PledgedAmount == nil {
+		data.PledgedAmount = new(big.Int)
+	}
+
+	if data.TotalPledgedAmount == nil {
+		data.TotalPledgedAmount = new(big.Int)
+	}
+
+	if data.TotalCapacity == nil {
+		data.TotalCapacity = new(big.Int)
 	}
 
 	return &stateObject{
@@ -485,10 +500,7 @@ func (s *stateObject) setBalance(amount *big.Int) {
 	s.data.Balance = amount
 }
 
-func (s *stateObject) SetFunds(funds []struct {
-	BlockNumber *big.Int
-	Amount      *big.Int
-}) {
+func (s *stateObject) SetFunds(funds common.MinedBlocks) {
 	s.db.journal.append(fundsChange{
 		account: &s.address,
 		prev:    s.data.Funds,
@@ -496,42 +508,27 @@ func (s *stateObject) SetFunds(funds []struct {
 	s.setFunds(funds)
 }
 
-func (s *stateObject) setFunds(funds []struct {
-	BlockNumber *big.Int
-	Amount      *big.Int
-}) {
+func (s *stateObject) setFunds(funds common.MinedBlocks) {
 	s.data.Funds = funds
 }
 
-// AddPledge adds amount to Pledge's balance.
-func (s *stateObject) AddPledge(amount *big.Int) {
-	if amount.Sign() == 0 {
-		if s.empty() {
-			s.touch()
-		}
-		return
-	}
-	s.SetPledge(new(big.Int).Add(s.Pledge(), amount))
-}
-
-func (s *stateObject) SubPledge(amount *big.Int) {
-	if amount.Sign() == 0 {
-		return
-	}
-	s.SetPledge(new(big.Int).Sub(s.Pledge(), amount))
-}
-
-func (s *stateObject) SetPledge(amount *big.Int) {
-	s.db.journal.append(pledgeChange{
+func (s *stateObject)SetPledgeAmount(amount *big.Int) {
+	s.db.journal.append(pledgeAmountChange{
 		account: &s.address,
-		prev:    new(big.Int).Set(s.data.Pledge),
+		prev:    new(big.Int).Set(s.data.PledgedAmount),
 	})
-	s.setPledge(amount)
+	s.setPledgeAmount(amount)
+}
+func (s *stateObject) setPledgeAmount(amount *big.Int) {
+	s.data.PledgedAmount = amount
+}
+func (s *stateObject) setTotalPledgeAmount(amount *big.Int) {
+	s.data.TotalPledgedAmount = amount
+}
+func (s *stateObject) setTotalCapacity(cap *big.Int)  {
+	s.data.TotalCapacity = cap
 }
 
-func (s *stateObject) setPledge(amount *big.Int) {
-	s.data.Pledge = amount
-}
 
 func (s *stateObject) AddTotalLockedFunds(amount *big.Int) {
 	if amount.Sign() == 0 {
@@ -562,47 +559,60 @@ func (s *stateObject) setTotalLockedFunds(amount *big.Int) {
 	s.data.TotalLockedFunds = amount
 }
 
-func (s *stateObject) AddPid(pidHex []byte,amount *big.Int) error {
-	if len(pidHex)!= PidHashLength {
-		return errors.New("invalid PidHashLength")
+func (s *stateObject) AddTotalPledgeAmount(amount *big.Int)  {
+	if amount.Sign() == 0 {
+		if s.empty() {
+			s.touch()
+		}
+		return
 	}
-	
-	s.SetPid(pidHex,amount)
-	return nil
+	s.SetTotalPledgeAmount(new(big.Int).Add(s.TotalPledgeAmount(),amount))
 }
 
-func (s *stateObject) SubPid(pidHex []byte) *big.Int{
-	s.db.journal.append(pidChange{
+func (s *stateObject) SubTotalPledgeAmount(amount *big.Int)  {
+	if amount.Sign() == 0 {
+		if s.empty() {
+			s.touch()
+		}
+		return
+	}
+	s.SetTotalPledgeAmount(new(big.Int).Sub(s.TotalPledgeAmount(),amount))
+}
+
+func (s *stateObject)AddTotalCapacity(cap *big.Int)  {
+	s.SetTotalCapacity(new(big.Int).Add(s.TotalCapacity(),cap))
+}
+
+func (s *stateObject)SubTotalCapacity(cap *big.Int)  {
+	s.SetTotalCapacity(new(big.Int).Sub(s.TotalCapacity(),cap))
+}
+
+func (s *stateObject)SetTotalCapacity(cap *big.Int)  {
+	s.db.journal.append(totalCapacityChange{
 		account: &s.address,
-		prev:    s.data.Pid,
+		prev:    new(big.Int).Set(s.data.TotalCapacity),
 	})
-	for index,pid:=range s.data.Pid{
-       if hex.EncodeToString(pidHex)==pid.PidHex{
-		s.data.Pid=append(s.data.Pid[:index], s.data.Pid[index+1:]...)
-		return pid.PledgeAmount
-	   }
-	}
-	return common.Big0
+	s.setTotalCapacity(cap)
 }
 
-
-func (s *stateObject) SetPid(pidHex []byte,amount *big.Int) error {
-	s.db.journal.append(pidChange{
+func (s *stateObject) SetTotalPledgeAmount(amount *big.Int) {
+	s.db.journal.append(totalPledgeAmountChange{
 		account: &s.address,
-		prev:    s.data.Pid,
+		prev:    new(big.Int).Set(s.data.TotalPledgedAmount),
 	})
-	pid:=&common.Pid{
-		PidHex: hex.EncodeToString(pidHex),
-		PledgeAmount:amount,
-	}
-    s.data.Pid=append(s.data.Pid,pid)
-
-	s.setPid(s.data.Pid)
-	return nil
+	s.setTotalPledgeAmount(amount)
 }
 
-func (s *stateObject) setPid(pid common.PidList) {
-	s.data.Pid=pid
+func (s *stateObject) SetBinding(addr common.Address) {
+	s.db.journal.append(bindingChange{
+		account: &s.address,
+		prev: &s.data.Binding,
+	})
+	s.setBinding(addr)
+}
+
+func (s *stateObject) setBinding(ref common.Address) {
+	s.data.Binding = ref
 }
 func (s *stateObject) GetRedeemAmount(number uint64)*big.Int{
 	redeemBalance:=big.NewInt(0)
@@ -620,7 +630,7 @@ func (s *stateObject) GetRedeemAmount(number uint64)*big.Int{
 }
 
 
-func (s *stateObject) AddStakingList(address common.Address,addStaking *common.Staking) error {
+func (s *stateObject) AddStakingList(address common.Address,addStaking *common.Staking)  {
 	s.db.journal.append(stakingListChange{
 		account: &s.address,
 		prev:    s.data.Staking,
@@ -638,19 +648,18 @@ func (s *stateObject) AddStakingList(address common.Address,addStaking *common.S
 	}
 
 	var addresss []string
-	for address := range stakingMap {
-		addresss = append(addresss, address.Hex())
+	for addr := range stakingMap {
+		addresss = append(addresss, addr.Hex())
 	}
 	sort.Strings(addresss)
 	
 	var stakingList common.StakingList
 
-	for _, address := range addresss {
-		stakingList=append(stakingList, stakingMap[common.HexToAddress(address)])
+	for _, addr := range addresss {
+		stakingList=append(stakingList, stakingMap[common.HexToAddress(addr)])
 	}
 	sort.Stable(stakingList)
 	s.setStakingList(stakingList)
-	return nil
 }
 
 func (s *stateObject) SubStakingList(address common.Address,nowHeight uint64){
@@ -699,13 +708,16 @@ func (s *stateObject) SetCanRedeem(newCanRedeem *common.CanRedeem,index int64) {
 		account: &s.address,
 		prev:    s.data.CanRedeem,
 	})
-	if index==-1{
-		s.data.CanRedeem=append(s.data.CanRedeem, newCanRedeem)
 
+	var canRedeem  common.CanRedeemList
+
+	if index==-1{
+		canRedeem = append(s.data.CanRedeem, newCanRedeem)
 	}else{
-        s.data.CanRedeem=append(s.data.CanRedeem[:index],s.data.CanRedeem[index+1:]...)
+		canRedeem = append(s.data.CanRedeem[:index],s.data.CanRedeem[index+1:]...)
 	}
-	s.setCanRedeem(s.data.CanRedeem)
+
+	s.setCanRedeem(canRedeem)
 }
 
 func (s *stateObject) setCanRedeem(CanRedeem common.CanRedeemList) {
@@ -805,19 +817,23 @@ func (s *stateObject) Balance() *big.Int {
 	return s.data.Balance
 }
 
+func (s *stateObject) TotalPledgeAmount() *big.Int  {
+	return s.data.TotalPledgedAmount
+}
+func (s *stateObject) TotalCapacity() *big.Int  {
+	return s.data.TotalCapacity
+}
+
 func (s *stateObject) TotalLockedFunds() *big.Int {
 	return s.data.TotalLockedFunds
 }
 
-func (s *stateObject) Funds() []struct {
-	BlockNumber *big.Int
-	Amount      *big.Int
-} {
+func (s *stateObject) Funds() common.MinedBlocks {
 	return s.data.Funds
 }
 
-func (s *stateObject) Pledge() *big.Int {
-	return s.data.Pledge
+func (s *stateObject) PledgeAmount() *big.Int {
+	return s.data.PledgedAmount
 }
 
 
@@ -835,8 +851,8 @@ func (s *stateObject) AllStaking()common.StakingList{
 	return s.data.Staking
 }
 
-func (s *stateObject) Pid() common.PidList{
-	return s.data.Pid
+func (s *stateObject) Binding() common.Address{
+	return s.data.Binding
 }
 
 func (s *stateObject) CanRedeem()common.CanRedeemList{

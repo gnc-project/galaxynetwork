@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/gnc-project/galaxynetwork/common/pidaddress"
 	"math/big"
 	"strings"
 	"time"
@@ -681,7 +682,7 @@ func (s *PublicBlockChainAPI) GetAllPledgeAmount(ctx context.Context, address co
 	if state == nil || err != nil {
 		return nil, err
 	}
-	return (*hexutil.Big)(state.GetAllPledgeAmount(address)), state.Error()
+	return (*hexutil.Big)(state.GetTotalPledgeAmount(address)), state.Error()
 }
 // GetTotalLockedFunds returns the amount of wei for the given address in the state of the
 // given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
@@ -748,13 +749,11 @@ func (s *PublicBlockChainAPI) VerifyPid(ctx context.Context, address common.Addr
 	if strings.Contains(pidHex, "0x") {
 		pidHex = pidHex[2:]
 	}
-
 	key, err := hex.DecodeString(pidHex)
 	if err != nil {
 		return false, err
 	}
-
-	return state.VerifyPid(address, key), state.Error()
+	return state.VerifyPid(pidaddress.PIDAddress(address,key), address), state.Error()
 }
 
 // Result structs for GetProof

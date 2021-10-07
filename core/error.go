@@ -57,7 +57,9 @@ var (
 	// have enough funds for transfer(topmost call only).
 	ErrInsufficientFundsForTransfer = errors.New("insufficient funds for transfer")
 
-	ErrInsufficientFundsForPledge = errors.New("insufficient funds for Pledge")
+	ErrInsufficientFundsForUnlockStaking = errors.New("insufficient funds for unlockStaking")
+
+	ErrInsufficientFundsForRedeem = errors.New("insufficient for redeem")
 
 	ErrInsufficientStakingValue = errors.New("The staking amount is too small,Minimum 1000")
 

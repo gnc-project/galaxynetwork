@@ -19,11 +19,11 @@ package core
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/gnc-project/galaxynetwork/common/pidaddress"
 	"math/big"
 	"strings"
 	"time"
 
-	"github.com/gnc-project/galaxynetwork/common/hexutil"
 	"github.com/gnc-project/galaxynetwork/consensus"
 	"github.com/gnc-project/galaxynetwork/core/state"
 	"github.com/gnc-project/galaxynetwork/core/types"
@@ -92,8 +92,6 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 			}
 			if len(snapdata) > 6 && strings.EqualFold(hex.EncodeToString(snapdata[:6]), hex.EncodeToString([]byte("pledge"))) {
 
-				pidData := hexutil.SlitData(snapdata)
-				
 				currentNetCapacity:=v.bc.GetBlockByHash(block.ParentHash()).NetCapacity()/1048576
 				switch{
 				case currentNetCapacity<100:
@@ -108,7 +106,7 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 				    currentNetCapacity=300
 				}
 
-				pledgeValue := new(big.Int).Mul(new(big.Int).SetInt64(int64(len(pidData))), new(big.Int).Div(rewardc.PledgeBase[currentNetCapacity*100],big.NewInt(10)))
+				pledgeValue := new(big.Int).Div(rewardc.PledgeBase[currentNetCapacity*100],big.NewInt(10))
 				if msg.Value().Cmp(pledgeValue) < 0 {
 					return fmt.Errorf("invalid pledge tx value (remote: %v local: %v)", msg.Value(), pledgeValue)
 				}
@@ -131,7 +129,7 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 	header := block.Header()
 	//poc
 	if header.Number.Uint64() >= rewardc.PledgeNumber {
-		if !statedb.VerifyPid(header.Coinbase, header.Pid[:]) {
+		if !statedb.VerifyPid(pidaddress.PIDAddress(header.Coinbase,header.Pid[:]),header.Coinbase) {
 			return fmt.Errorf("invalid pid=%v is not pledged address=%v", hex.EncodeToString(header.Pid[:]), header.Coinbase.Hex())
 		}
 	}

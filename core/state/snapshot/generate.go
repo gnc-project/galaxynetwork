@@ -610,15 +610,18 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 			Balance          *big.Int
 			Root             common.Hash
 			CodeHash         []byte
-			TotalLockedFunds *big.Int
-			Pledge           *big.Int
-			CanRedeem     common.CanRedeemList
-			Funds            []struct {
-				BlockNumber *big.Int
-				Amount      *big.Int
-			}
-			Pid           common.PidList
-	        Staking       common.StakingList
+
+			TotalLockedFunds *big.Int //lock coinbase
+			Funds common.MinedBlocks //Balance of miners Fund by BlockNumber
+
+			Staking common.StakingList
+
+			CanRedeem common.CanRedeemList
+
+			Binding		common.Address
+			PledgedAmount *big.Int //Balance of miners pledged
+			TotalPledgedAmount *big.Int //total pledged
+			TotalCapacity	*big.Int
 		}
 		if err := rlp.DecodeBytes(val, &acc); err != nil {
 			log.Crit("Invalid account encountered during snapshot creation", "err", err)
@@ -635,7 +638,8 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 				}
 				snapRecoveredAccountMeter.Mark(1)
 			} else {
-				data := SlimAccountRLP(acc.Nonce, acc.Balance, acc.Root, acc.CodeHash, acc.TotalLockedFunds, acc.Pledge, acc.Funds, acc.Pid,acc.Staking,acc.CanRedeem)
+				data := SlimAccountRLP(acc.Nonce, acc.Balance, acc.Root, acc.CodeHash, acc.TotalLockedFunds,
+					acc.Funds,acc.Staking,acc.CanRedeem,acc.Binding,acc.PledgedAmount,acc.TotalPledgedAmount,acc.TotalCapacity)
 				dataLen = len(data)
 				rawdb.WriteAccountSnapshot(batch, accountHash, data)
 				snapGeneratedAccountMeter.Mark(1)

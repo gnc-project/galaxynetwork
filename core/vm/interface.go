@@ -17,10 +17,10 @@
 package vm
 
 import (
+	"github.com/gnc-project/galaxynetwork/core/types"
 	"math/big"
 
 	"github.com/gnc-project/galaxynetwork/common"
-	"github.com/gnc-project/galaxynetwork/core/types"
 )
 
 // StateDB is an EVM database for full state querying.
@@ -30,31 +30,6 @@ type StateDB interface {
 	SubBalance(common.Address, *big.Int)
 	AddBalance(common.Address, *big.Int)
 	GetBalance(common.Address) *big.Int
-
-	SubPledge(common.Address, *big.Int)
-	AddPledge(common.Address, *big.Int)
-	GetAllPledgeAmount(common.Address) *big.Int
-	GetRedeemAmount(common.Address,uint64) *big.Int
-
-	SubTotalLockedFunds(addr common.Address, amount *big.Int)
-	GetTotalLockedFunds(addr common.Address) *big.Int
-    SetFunds(addr common.Address, funds []struct {
-		BlockNumber *big.Int 
-		Amount      *big.Int})
-
-	AddCanRedeem(addr common.Address, number uint64,amount *big.Int)
-	SubCanRedeem(addr common.Address,index int64)
-	GetCanRedeem(addr common.Address) common.CanRedeemList 
-	
-	GetUnlockStakingValue(addr common.Address,number uint64) *big.Int
-
-	AddStakingList(addr common.Address,stakingList *common.Staking)
-	SubStakingList(addr common.Address,number uint64)
-
-    
-	AddPid(addr common.Address, pidHex []byte,amount *big.Int)
-	SubPid(addr common.Address,pidHex []byte)(*big.Int)
-	GetPid(addr common.Address) common.PidList
 
 	GetNonce(common.Address) uint64
 	SetNonce(common.Address, uint64)
@@ -99,6 +74,37 @@ type StateDB interface {
 	AddPreimage(common.Hash, []byte)
 
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
+
+	//*******************************poc**********************
+	PledgeBinding(common.Address, common.Address)
+	DeleteBinding(common.Address)
+
+	GetPledgeAmount(common.Address, common.Address) *big.Int
+	SetPledgeAmount(common.Address, *big.Int)
+
+	AddTotalPledgeAmount(common.Address, *big.Int)
+	SubTotalPledgeAmount(common.Address, *big.Int)
+	GetTotalPledgeAmount(common.Address) *big.Int
+
+	AddTotalCapacity(common.Address, *big.Int)
+	SubTotalCapacity(common.Address, *big.Int)
+	GetTotalCapacity(common.Address) *big.Int
+
+
+	SetTotalLockedFunds(common.Address, *big.Int)
+	SubTotalLockedFunds(common.Address, *big.Int)
+	GetTotalLockedFunds( common.Address) *big.Int
+    SetFunds(common.Address, common.MinedBlocks)
+
+	AddCanRedeem(common.Address,  uint64, *big.Int)
+	SubCanRedeem(common.Address, int64)
+	GetCanRedeem(common.Address) common.CanRedeemList
+	GetRedeemAmount(common.Address,uint64) *big.Int
+	
+	GetUnlockStakingValue(common.Address, uint64) *big.Int
+
+	AddStakingList(common.Address, *common.Staking)
+	SubStakingList(common.Address, uint64)
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM

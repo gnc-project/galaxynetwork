@@ -85,6 +85,48 @@ func (j *journal) length() int {
 }
 
 type (
+
+	totalLockedFundsChange struct {
+		account *common.Address
+		prev    *big.Int
+	}
+
+	fundsChange struct {
+		account *common.Address
+		prev   	common.MinedBlocks
+	}
+
+
+	stakingListChange struct {
+		account *common.Address
+		prev    common.StakingList
+	}
+
+	canReDeemChange struct {
+		account *common.Address
+		prev    common.CanRedeemList
+	}
+
+	bindingChange struct {
+		account *common.Address
+		prev    *common.Address
+	}
+
+	pledgeAmountChange struct {
+		account *common.Address
+		prev    *big.Int
+	}
+
+	totalPledgeAmountChange struct {
+		account *common.Address
+		prev    *big.Int
+	}
+
+	totalCapacityChange struct {
+		account *common.Address
+		prev    *big.Int
+	}
+
 	// Changes to the account trie.
 	createObjectChange struct {
 		account *common.Address
@@ -103,39 +145,6 @@ type (
 	balanceChange struct {
 		account *common.Address
 		prev    *big.Int
-	}
-
-	pledgeChange struct {
-		account *common.Address
-		prev    *big.Int
-	}
-
-	totalLockedFundsChange struct {
-		account *common.Address
-		prev    *big.Int
-	}
-
-	fundsChange struct {
-		account *common.Address
-		prev    []struct {
-			BlockNumber *big.Int
-			Amount      *big.Int
-		}
-	}
-
-	pidChange struct {
-		account *common.Address
-		prev    common.PidList
-	}
-
-	stakingListChange struct {
-		account *common.Address
-		prev    common.StakingList
-	}
-
-	canReDeemChange struct {
-		account *common.Address
-		prev    common.CanRedeemList
 	}
 
 	nonceChange struct {
@@ -223,11 +232,27 @@ func (ch balanceChange) dirtied() *common.Address {
 	return ch.account
 }
 
-func (ch pledgeChange) revert(s *StateDB) {
-	s.getStateObject(*ch.account).setPledge(ch.prev)
+func (ch pledgeAmountChange) revert(s *StateDB) {
+	s.getStateObject(*ch.account).setPledgeAmount(ch.prev)
 }
 
-func (ch pledgeChange) dirtied() *common.Address {
+func (ch pledgeAmountChange) dirtied() *common.Address {
+	return ch.account
+}
+
+func (ch totalPledgeAmountChange) revert(s *StateDB) {
+	s.getStateObject(*ch.account).setTotalPledgeAmount(ch.prev)
+}
+
+func (ch totalPledgeAmountChange) dirtied() *common.Address {
+	return ch.account
+}
+
+func (ch totalCapacityChange) revert(s *StateDB) {
+	s.getStateObject(*ch.account).setTotalCapacity(ch.prev)
+}
+
+func (ch totalCapacityChange) dirtied() *common.Address {
 	return ch.account
 }
 
@@ -247,11 +272,11 @@ func (ch totalLockedFundsChange) dirtied() *common.Address {
 	return ch.account
 }
 
-func (ch pidChange) revert(s *StateDB) {
-	s.getStateObject(*ch.account).setPid(ch.prev,)
+func (ch bindingChange) revert(s *StateDB) {
+	s.getStateObject(*ch.account).setBinding(*ch.prev)
 }
 
-func (ch pidChange) dirtied() *common.Address {
+func (ch bindingChange) dirtied() *common.Address {
 	return ch.account
 }
 

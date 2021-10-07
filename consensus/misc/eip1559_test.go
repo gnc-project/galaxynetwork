@@ -17,12 +17,13 @@
 package misc
 
 import (
-	"math/big"
-	"testing"
-
+	"fmt"
 	"github.com/gnc-project/galaxynetwork/common"
+	"github.com/gnc-project/galaxynetwork/common/math"
 	"github.com/gnc-project/galaxynetwork/core/types"
 	"github.com/gnc-project/galaxynetwork/params"
+	"math/big"
+	"testing"
 )
 
 // copyConfig does a _shallow_ copy of a given config. Safe to set new values, but
@@ -129,4 +130,40 @@ func TestCalcBaseFee(t *testing.T) {
 			t.Errorf("test %d: have %d  want %d, ", i, have, want)
 		}
 	}
+}
+
+func TestVerifyEip1559Header(t *testing.T) {
+
+
+	c := big.NewInt(10)
+	d := big.NewInt(20)
+	e := big.NewInt(15)
+
+	fmt.Println(c.Sub(d,e),"c=",c,"d=",d,"e=",e)
+	return
+	parent := &types.Header{
+		Number:   big.NewInt(12),
+		GasLimit: 16597883,
+		GasUsed:  0,
+		BaseFee:  big.NewInt(201417240),
+	}
+	x := big.NewInt(25177155)
+	baseFeeDelta := big.NewInt(25177155)
+	a := math.BigMax(
+		x.Sub(parent.BaseFee, baseFeeDelta),
+		common.Big0,
+	)
+
+	fmt.Println(a)
+	return
+
+//	header.BaseFee=201,562,011 expectedBaseFee=2,000,000,000,000,000,000 parent.BaseFee=230,356,583   parent.Number=11 parent.GasLimit=16,597,883 GasUsed=0
+
+	//for i := 0; i<10000;i++ {
+	//	go func() {
+			ex := CalcBaseFee(config(), parent)
+			fmt.Println(ex)
+		//}()
+	//}
+
 }

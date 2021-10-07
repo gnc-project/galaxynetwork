@@ -11,10 +11,14 @@ const (
 	MinimumDifficulty      = uint64(15000000000000000) // The minimum that the difficulty may ever be.
 	GenesisNumber          = 0
 	PledgeNumber           = GenesisNumber + 100
-    DayBlock               =180/FutureBlockTime
-	GenesisTimestamp       =1630043179
+    DayBlock               =  10 // 24 * 60 * 60 / FutureBlockTime
+    Day60				   = 1	//Received in 60 days
+	GenesisTimestamp       = 1630043179
 	MinSectorExpiration    = 180
 	ChainID					= 37021
+	BaseCapacity			= 102	//GB
+	TotalCapacity			= 100 	//PB
+	BasePB					= 1024 * 1024
 )
 
 var (

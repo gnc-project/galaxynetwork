@@ -23,7 +23,6 @@ import (
 	"strconv"
 
 	"github.com/gnc-project/galaxynetwork/common"
-	"github.com/gnc-project/galaxynetwork/common/hexutil"
 	"github.com/gnc-project/galaxynetwork/consensus"
 	"github.com/gnc-project/galaxynetwork/consensus/ethash"
 	"github.com/gnc-project/galaxynetwork/core/state"
@@ -65,7 +64,7 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 		Transfer:             Transfer,
 		PledgeTransfer:       PledgeTransfer,
 		RedeemTransfer:       RedeemTransfer,
-		DelectPidTransfer:    DelectPidTransfer,
+		DelectPidTransfer:    DeletePidTransfer,
 		UnlockRewardTransfer: UnlockRewardTransfer,
 		StakingTransfer:      StakingTransfer,
 		UnlockStakingTransfer: UnlockStakingTransfer,
@@ -140,17 +139,39 @@ func Transfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int) 
 	db.AddBalance(recipient, amount)
 }
 
-//Subtracts pledgeamount from sender’s balance and adds pledge to recipient’s pledge
-func PledgeTransfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int, data []byte) {
+// PledgeTransfer Subtracts pledgeAmount from sender’s balance and adds pledge to recipient’s pledge
+func PledgeTransfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int) {
 	db.SubBalance(sender, amount)
-	db.AddPledge(recipient, amount)
-	pidData := hexutil.SlitData(data)
-	for i := 0; i < len(pidData); i++ {
-		amount:=new(big.Int).Div(amount,big.NewInt(int64(len(pidData))))
-		db.AddPid(recipient, pidData[i],amount)
-	}
+	db.PledgeBinding(recipient,sender)
+	db.SetPledgeAmount(recipient,amount)
+	db.AddTotalPledgeAmount(sender,amount)
+	db.AddTotalCapacity(sender,big.NewInt(rewardc.BaseCapacity))
 }
 
+// DeletePidTransfer 1
+func DeletePidTransfer(db vm.StateDB, sender, recipient common.Address,number *big.Int) {
+
+	redeemAmount := db.GetPledgeAmount(recipient,sender)
+	if redeemAmount.Cmp(common.Big0) <= 0 {
+		return
+	}
+
+	db.DeleteBinding(recipient)
+	db.SetPledgeAmount(recipient,common.Big0)
+	db.SubTotalPledgeAmount(sender,redeemAmount)
+	db.SubTotalCapacity(sender,big.NewInt(rewardc.BaseCapacity))
+
+	if new(big.Int).Div(db.GetTotalCapacity(sender),big.NewInt(rewardc.BasePB)).Uint64() < rewardc.TotalCapacity{
+		lockedFunds := db.GetTotalLockedFunds(sender)
+		db.SubTotalLockedFunds(sender,lockedFunds)
+		db.SetFunds(sender,common.MinedBlocks{})
+	}
+
+	trueRedeemAmount := new(big.Int).Div(new(big.Int).Mul(redeemAmount,big.NewInt(75)),big.NewInt(100))
+	db.AddCanRedeem(sender,number.Uint64() + (rewardc.Day60 * rewardc.DayBlock),trueRedeemAmount)
+}
+
+// RedeemTransfer 2
 func RedeemTransfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int,number *big.Int){
 	CanRedeemList:=db.GetCanRedeem(sender)
 	for index,canRedeem:=range CanRedeemList{
@@ -163,25 +184,7 @@ func RedeemTransfer(db vm.StateDB, sender, recipient common.Address, amount *big
 	}
 }
 
-func DelectPidTransfer(db vm.StateDB, sender, recipient common.Address,data []byte,number *big.Int){
-	pidData := hexutil.SlitData(data)
-	redeemAmount:=big.NewInt(0)
-	for _,pid:=range pidData{
-		redeemAmount=new(big.Int).Add(redeemAmount,db.SubPid(sender,pid))
-	}
-	if redeemAmount.Cmp(big.NewInt(0))>0{
-		if len(db.GetPid(sender))*102/1048576<=100{
-			lockedFunds := db.GetTotalLockedFunds(sender)
-			db.SubTotalLockedFunds(sender,lockedFunds)
-			funds:=[]struct{BlockNumber *big.Int; Amount *big.Int}{}
-			db.SetFunds(sender,funds)
-		}
-		db.SubPledge(sender,redeemAmount)
-		trueRedeemAmout:=new(big.Int).Div(new(big.Int).Mul(redeemAmount,big.NewInt(75)),big.NewInt(100))
-		db.AddCanRedeem(recipient,number.Uint64()+(60*rewardc.DayBlock),trueRedeemAmout)
-	}
-}
-
+// UnlockRewardTransfer Linear release
 func UnlockRewardTransfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int, number *big.Int) {
 	rewardToLock, available, lockedRewardVestingSpec := ethash.LockedRewardFromReward(big.NewInt(0))
 
@@ -198,7 +201,7 @@ func StakingTransfer(db vm.StateDB, sender, recipient common.Address, amount *bi
 	
 	stakingInfo:=struct{Value *big.Int; Weight *big.Int; StopBlock uint64; StartBlock uint64}{
 		Value:amount,
-		StopBlock:number.Uint64()+uint64((frozenPeriod*rewardc.DayBlock)),
+		StopBlock: number.Uint64()+(frozenPeriod * rewardc.DayBlock),
 		StartBlock: number.Uint64(),
 	}
 
@@ -225,8 +228,6 @@ func StakingTransfer(db vm.StateDB, sender, recipient common.Address, amount *bi
 	db.SubBalance(sender, amount)
 	db.AddStakingList(sender,staking)
 }
-
-
 
 func UnlockStakingTransfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int,number *big.Int) {
     db.SubStakingList(sender,number.Uint64())

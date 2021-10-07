@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/gnc-project/galaxynetwork/common/pidaddress"
 	"github.com/gnc-project/galaxynetwork/rewardc"
 	"math/big"
 	"sync"
@@ -626,7 +627,7 @@ func (w *worker) resultLoop() {
 				continue
 			}else {
 				if block.Header().Number.Uint64() >= rewardc.PledgeNumber {
-					if !statedb.VerifyPid(block.Header().Coinbase, block.Header().Pid[:]) {
+					if !statedb.VerifyPid(pidaddress.PIDAddress(block.Header().Coinbase, block.Header().Pid[:]),block.Header().Coinbase) {
 						log.Error("worker resultLoop","err",fmt.Errorf("invalid pid=%v is not pledged address=%v",
 							block.Header().Pid.Hex(), block.Header().Coinbase.Hex()))
 						continue
@@ -923,6 +924,8 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	// Set baseFee and GasLimit if we are on an EIP-1559 chain
 	if w.chainConfig.IsLondon(header.Number) {
 		header.BaseFee = misc.CalcBaseFee(w.chainConfig, parent.Header())
+		log.Info("commitNewWork","header.BaseFee",header.BaseFee,"parent.BaseFee",parent.Header().BaseFee,"parent.Number",parent.Header().Number,
+			"parent.GasLimit",parent.Header().GasLimit,"parent.GasUsed",parent.Header().GasUsed,"misc.CalcBaseFee", misc.CalcBaseFee(w.chainConfig, parent.Header()))
 		if !w.chainConfig.IsLondon(parent.Number()) {
 			parentGasLimit := parent.GasLimit() * params.ElasticityMultiplier
 			header.GasLimit = core.CalcGasLimit(parentGasLimit, w.config.GasCeil)

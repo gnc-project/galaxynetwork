@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/gnc-project/galaxynetwork/common/pidaddress"
 	"github.com/gnc-project/galaxynetwork/consensus/ethash"
 	"github.com/gnc-project/galaxynetwork/log"
 	"github.com/gnc-project/galaxynetwork/pocmine"
@@ -86,7 +87,7 @@ func (b *EthAPIBackend) AddPlot(ctx context.Context, pid common.Hash, proof []by
 	}
 
 	if number.Uint64() >= rewardc.PledgeNumber {
-		if !statedb.VerifyPid(b.eth.etherbase, pid[:]) {
+		if !statedb.VerifyPid(pidaddress.PIDAddress(b.eth.etherbase,pid[:]), b.eth.etherbase) {
 			return nil, fmt.Errorf("invalid pid=%v is not pledged address=%v", pid.Hex(), b.eth.etherbase.Hex())
 		}
 	}

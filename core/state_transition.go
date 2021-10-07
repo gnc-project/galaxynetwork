@@ -17,11 +17,11 @@
 package core
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math"
 	"math/big"
 	"strings"
-	"encoding/hex"
 
 	"github.com/gnc-project/galaxynetwork/common"
 	cmath "github.com/gnc-project/galaxynetwork/common/math"
@@ -319,7 +319,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
 		}else{
 			if strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("redeem")))&&!st.evm.Context.CanRedeem(st.state, msg.From(), msg.Value(),st.evm.Context.BlockNumber) {
-				return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForPledge, msg.From().Hex())
+				return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForRedeem, msg.From().Hex())
 			}
 		}
     }else{
@@ -333,7 +333,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		unlockValue:=st.evm.StateDB.GetUnlockStakingValue(msg.From(),st.evm.Context.BlockNumber.Uint64())
 
 		if unlockValue.Cmp(msg.Value())!=0{
-			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForPledge, msg.From().Hex())
+			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForUnlockStaking, msg.From().Hex())
 		}
 	}
 

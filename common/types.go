@@ -63,11 +63,6 @@ type Staking struct{
 				}
 }
 
-type Pid struct {
-	PidHex string
-	PledgeAmount *big.Int
-}
-
 type CanRedeem struct {
 	UnlockBlock  uint64
 	RedeemAmount *big.Int
@@ -75,7 +70,6 @@ type CanRedeem struct {
 
 type CanRedeemList []*CanRedeem
 
-type PidList    []*Pid
 type StakingList []*Staking
 func (S StakingList) Len() int {
 	return len(S)
@@ -86,6 +80,14 @@ func (S StakingList) Less(i, j int) bool {
 func (S StakingList) Swap(i, j int) {
 	S[i], S[j] = S[j], S[i]
 }
+
+
+type MinedBlock struct {
+	BlockNumber *big.Int
+	Amount      *big.Int
+}
+
+type MinedBlocks []*MinedBlock
 
 // BytesToHash sets b to hash.
 // If b is larger than len(h), b will be cropped from the left.

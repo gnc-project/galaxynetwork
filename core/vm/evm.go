@@ -17,11 +17,12 @@
 package vm
 
 import (
+	"encoding/hex"
+	"github.com/gnc-project/galaxynetwork/rewardc"
 	"math/big"
+	"strings"
 	"sync/atomic"
 	"time"
-	"encoding/hex"
-	"strings"
 
 	"github.com/gnc-project/galaxynetwork/common"
 	"github.com/gnc-project/galaxynetwork/common/hexutil"
@@ -41,9 +42,9 @@ type (
 	CanRedeemFunc func(StateDB, common.Address,*big.Int,*big.Int) bool 
 	// TransferFunc is the signature of a transfer function
 	TransferFunc func(StateDB, common.Address, common.Address, *big.Int)
-	PledgeFunc   func(StateDB, common.Address, common.Address, *big.Int, []byte)
+	PledgeFunc   func(StateDB, common.Address, common.Address, *big.Int)
 	RedeemFunc   func(StateDB, common.Address, common.Address, *big.Int,*big.Int)
-	DelectPidFunc   func(StateDB, common.Address, common.Address, []byte,*big.Int)
+	DelectPidFunc   func(StateDB, common.Address, common.Address,*big.Int)
 
 	UnlockRewardTransferFunc func(StateDB, common.Address, common.Address, *big.Int, *big.Int)
 
@@ -232,13 +233,13 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	}
 	
 	if len(snapdata) > 6 && strings.EqualFold(hex.EncodeToString(snapdata[:6]), hex.EncodeToString([]byte("pledge"))) && (caller.Address() == addr) {	
-		evm.Context.PledgeTransfer(evm.StateDB, caller.Address(), addr, value, input)
-		capacity=big.NewInt(int64(len(hexutil.SlitData(input))*102))
+		evm.Context.PledgeTransfer(evm.StateDB, caller.Address(), addr, value)
+		capacity = big.NewInt(int64(len(hexutil.SlitData(input)) * rewardc.BaseCapacity))
 	}else if len(snapdata) > 6&&strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("redeem")))&&(caller.Address()==addr){
 		evm.Context.RedeemTransfer(evm.StateDB, caller.Address(), addr, value,evm.Context.BlockNumber)
 	}else if len(snapdata) > 6&&strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("delPid")))&&(caller.Address()==addr){
-		evm.Context.DelectPidTransfer(evm.StateDB, caller.Address(), addr,input,evm.Context.BlockNumber)
-		capacity=new(big.Int).Mul(big.NewInt(int64(len(hexutil.SlitData(input))*102)),big.NewInt(-1))
+		evm.Context.DelectPidTransfer(evm.StateDB, caller.Address(), addr,evm.Context.BlockNumber)
+		capacity=new(big.Int).Mul(big.NewInt(int64(len(hexutil.SlitData(input)) * rewardc.BaseCapacity)),big.NewInt(-1))
 	} else if strings.EqualFold(hex.EncodeToString(snapdata), hex.EncodeToString([]byte("unlockReward"))) && (caller.Address() == addr) {
 		evm.Context.UnlockRewardTransfer(evm.StateDB, caller.Address(), addr, value, evm.Context.BlockNumber)
 	}else if len(snapdata) > 7&&strings.EqualFold(hex.EncodeToString(snapdata[:7]), hex.EncodeToString([]byte("staking"))) && (caller.Address() == addr) {

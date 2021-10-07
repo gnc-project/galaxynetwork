@@ -594,9 +594,9 @@ func accumulateRewards(chain consensus.ChainHeaderReader, state *state.StateDB, 
 	}
 	reward := rewardc.GetReward(header.Number.Uint64())
 
-	rewardToLock, available, lockedRewardVestingSpec := LockedRewardFromReward(new(big.Int).Mul(new(big.Int).Div(reward,big.NewInt(100)),rewardc.MineRewardProportion))
+	rewardLock, available, lockedRewardVestingSpec := LockedRewardFromReward(new(big.Int).Mul(new(big.Int).Div(reward,big.NewInt(100)),rewardc.MineRewardProportion))
 
-	amountUnlocked := SetLockedFunds(rewardToLock, lockedRewardVestingSpec, state, header.Coinbase, header.Number)
+	amountUnlocked := SetLockedFunds(rewardLock, lockedRewardVestingSpec, state, header.Coinbase, header.Number)
 
 	// Accumulate the rewards for the miner and any included uncles
 	for _, uncle := range uncles {
@@ -771,31 +771,31 @@ var RewardVestingSpec = VestSpec{
 	StepDuration:  int64(1 * rewardc.DayBlock),
 }
 
-//Calculate and lock 75% of coins
+// LockedRewardFromReward Calculate and lock 75% of coins
 func LockedRewardFromReward(reward *big.Int) (*big.Int, *big.Int, *VestSpec) {
 	spec := &RewardVestingSpec
 	lockAmount := big.NewInt(0).Div(big.NewInt(0).Mul(reward, LockedRewardFactorNum), LockedRewardFactorDenom)
 	return lockAmount, big.NewInt(0).Sub(reward, lockAmount), spec
 }
 
-//Add locked coins
-func SetLockedFunds(vestingSum *big.Int, spec *VestSpec, self *state.StateDB, coinbase common.Address, number *big.Int) (vested *big.Int) {
+// SetLockedFunds Add locked coins
+func SetLockedFunds(vestingSum *big.Int, spec *VestSpec, state *state.StateDB, coinbase common.Address, number *big.Int) (vested *big.Int) {
 	if vestingSum.Cmp(Zero()) < 0 {
 		return Zero()
 	}
 
 	//Calculate unlocked coins
 
-	amountUnlocked := self.UnlockVestedFunds(number, coinbase)
-	lockedFunds := self.GetTotalLockedFunds(coinbase)
+	amountUnlocked := state.UnlockVestedFunds(number, coinbase)
+	lockedFunds := state.GetTotalLockedFunds(coinbase)
 
 	if new(big.Int).Sub(lockedFunds, amountUnlocked).Cmp(Zero()) < 0 {
 		return Zero()
 	}
 
-	self.SubTotalLockedFunds(coinbase, amountUnlocked)
+	state.SubTotalLockedFunds(coinbase, amountUnlocked)
 
-	addLockedFunds(number, vestingSum, spec, self, coinbase)
+	addLockedFunds(number, vestingSum, spec, state, coinbase)
 
 	return amountUnlocked
 }
@@ -804,9 +804,10 @@ func Zero() *big.Int {
 	return big.NewInt(0)
 }
 
-func addLockedFunds(num *big.Int, vestingSum *big.Int, spec *VestSpec, self *state.StateDB, addr common.Address) {
-	self.AddTotalLockedFunds(addr, vestingSum)
-	funds := self.GetFunds(addr)
+//Linear release
+func addLockedFunds(num *big.Int, vestingSum *big.Int, spec *VestSpec, state *state.StateDB, addr common.Address) {
+	state.AddTotalLockedFunds(addr, vestingSum)
+	funds := state.GetFunds(addr)
 	epochToIndex := make(map[*big.Int]int, len(funds))
 	for i, vf := range funds {
 		epochToIndex[vf.BlockNumber] = i
@@ -832,11 +833,8 @@ func addLockedFunds(num *big.Int, vestingSum *big.Int, spec *VestSpec, self *sta
 			currentAmt := funds[index].Amount
 			funds[index].Amount = big.NewInt(0).Add(currentAmt, vestThisTime)
 		} else {
-			entry := struct {
-				BlockNumber *big.Int
-				Amount      *big.Int
-			}{BlockNumber: vestEpoch, Amount: vestThisTime}
-			funds = append(funds, entry)
+			entry := common.MinedBlock{BlockNumber: vestEpoch,Amount: vestThisTime}
+			funds = append(funds, &entry)
 			epochToIndex[vestEpoch] = len(funds) - 1
 		}
 	}
@@ -845,5 +843,5 @@ func addLockedFunds(num *big.Int, vestingSum *big.Int, spec *VestSpec, self *sta
 		return funds[first].BlockNumber.Cmp(funds[second].BlockNumber) < 0
 	})
 
-	self.SetFunds(addr, funds)
+	state.SetFunds(addr, funds)
 }

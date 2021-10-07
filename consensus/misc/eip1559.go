@@ -18,6 +18,7 @@ package misc
 
 import (
 	"fmt"
+	"github.com/gnc-project/galaxynetwork/log"
 	"math/big"
 
 	"github.com/gnc-project/galaxynetwork/common"
@@ -45,6 +46,8 @@ func VerifyEip1559Header(config *params.ChainConfig, parent, header *types.Heade
 	// Verify the baseFee is correct based on the parent header.
 	expectedBaseFee := CalcBaseFee(config, parent)
 	if header.BaseFee.Cmp(expectedBaseFee) != 0 {
+		log.Error("VerifyEip1559Header","header.BaseFee",header.BaseFee,"expectedBaseFee",expectedBaseFee,"parent.BaseFee",parent.BaseFee,
+			"parent.Number",parent.Number,"parent.GasLimit",parent.GasLimit,"GasUsed",parent.GasUsed)
 		return fmt.Errorf("invalid baseFee: have %s, want %s, parentBaseFee %s, parentGasUsed %d",
 			expectedBaseFee, header.BaseFee, parent.BaseFee, parent.GasUsed)
 	}
@@ -53,6 +56,9 @@ func VerifyEip1559Header(config *params.ChainConfig, parent, header *types.Heade
 
 // CalcBaseFee calculates the basefee of the header.
 func CalcBaseFee(config *params.ChainConfig, parent *types.Header) *big.Int {
+
+	return new(big.Int).SetUint64(params.InitialBaseFee)
+
 	// If the current block is the first EIP-1559 block, return the InitialBaseFee.
 	if !config.IsLondon(parent.Number) {
 		return new(big.Int).SetUint64(params.InitialBaseFee)
@@ -63,6 +69,7 @@ func CalcBaseFee(config *params.ChainConfig, parent *types.Header) *big.Int {
 		parentGasTargetBig       = new(big.Int).SetUint64(parentGasTarget)
 		baseFeeChangeDenominator = new(big.Int).SetUint64(params.BaseFeeChangeDenominator)
 	)
+
 	// If the parent gasUsed is the same as the target, the baseFee remains unchanged.
 	if parent.GasUsed == parentGasTarget {
 		return new(big.Int).Set(parent.BaseFee)
@@ -76,7 +83,6 @@ func CalcBaseFee(config *params.ChainConfig, parent *types.Header) *big.Int {
 			x.Div(y, baseFeeChangeDenominator),
 			common.Big1,
 		)
-
 		return x.Add(parent.BaseFee, baseFeeDelta)
 	} else {
 		// Otherwise if the parent block used less gas than its target, the baseFee should decrease.

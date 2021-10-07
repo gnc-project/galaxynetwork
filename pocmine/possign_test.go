@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/gnc-project/galaxynetwork/common"
 	"github.com/gnc-project/galaxynetwork/core/types"
 	"github.com/gnc-project/galaxynetwork/crypto"
 	"log"
@@ -12,6 +13,10 @@ import (
 	"testing"
 )
 
+func TestPID(t *testing.T)  {
+	address := common.HexToAddress("0x873ed4b4c3942172f6274ebe7562cc8958d75bf8feeb82660faffbb56477f6cc")
+	fmt.Println(address.Hex())
+}
 
 func TestSign(t *testing.T) {
 	header := &types.Header{
