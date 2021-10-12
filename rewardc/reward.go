@@ -53,14 +53,8 @@ var (
 		10000:new(big.Int).Mul(big.NewInt(2531),big.NewInt(1e+16)),
 		20000:new(big.Int).Mul(big.NewInt(1266),big.NewInt(1e+16)),
 		30000:new(big.Int).Mul(big.NewInt(844),big.NewInt(1e+16)),
-		// 40000:new(big.Int).Mul(big.NewInt(633),big.NewInt(1e+16)),
-		// 50000:new(big.Int).Mul(big.NewInt(506),big.NewInt(1e+16)),
-		// 60000:new(big.Int).Mul(big.NewInt(422),big.NewInt(1e+16)),
-		// 70000:new(big.Int).Mul(big.NewInt(362),big.NewInt(1e+16)),
-		// 80000:new(big.Int).Mul(big.NewInt(316),big.NewInt(1e+16)),
-		// 90000:new(big.Int).Mul(big.NewInt(281),big.NewInt(1e+16)),
-		// 100000:new(big.Int).Mul(big.NewInt(253),big.NewInt(1e+16)),
 	}
+
 	StakingBase=map[uint64]uint64{
         0:1,
 		90:10,

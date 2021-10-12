@@ -3,6 +3,8 @@ package transfertype
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/gnc-project/galaxynetwork/rewardc"
+	"math/big"
 )
 
 var (
@@ -28,3 +30,21 @@ var (
 	ErrInsufficientFundsForRedeem = errors.New("insufficient for redeem")
 	ErrInsufficientFundsForUnlockStaking = errors.New("insufficient funds for unlockStaking")
 )
+
+func CalculateNetCapacity(currentNetCapacity uint64) *big.Int {
+
+	switch{
+	case currentNetCapacity<100:
+		currentNetCapacity=1
+	case 100<=currentNetCapacity&&currentNetCapacity<2000:
+		currentNetCapacity=currentNetCapacity/100
+	case 2000<=currentNetCapacity&&currentNetCapacity<10000:
+		currentNetCapacity=currentNetCapacity/1000*10
+	case 10000<=currentNetCapacity&&currentNetCapacity<30000:
+		currentNetCapacity=currentNetCapacity/10000*100
+	default :
+		currentNetCapacity=300
+	}
+
+	return new(big.Int).Div(rewardc.PledgeBase[currentNetCapacity*100],big.NewInt(10))
+}

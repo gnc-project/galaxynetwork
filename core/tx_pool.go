@@ -642,23 +642,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		if pool.currentState.VerifyPid(*tx.To(),from){
 			return transfertype.ErrDuplicatePledgedPid
 		}
+
 		currentNetCapacity := uint64(0)
 		if pool.chain.CurrentBlock().NumberU64() > 0 {
 			currentNetCapacity = pool.chain.GetBlock(pool.chain.CurrentBlock().ParentHash(),pool.chain.CurrentBlock().NumberU64()-1).NetCapacity()/1048576
 		}
-		switch{
-		case currentNetCapacity<100:
-			currentNetCapacity=1
-		case 100<=currentNetCapacity&&currentNetCapacity<2000:
-			currentNetCapacity=currentNetCapacity/100
-		case 2000<=currentNetCapacity&&currentNetCapacity<10000:
-			currentNetCapacity=currentNetCapacity/1000*10
-		case 10000<=currentNetCapacity&&currentNetCapacity<30000:
-			currentNetCapacity=currentNetCapacity/10000*100
-		default :
-			currentNetCapacity=300
-		}
-		pledgeValue :=  new(big.Int).Div(rewardc.PledgeBase[currentNetCapacity*100],big.NewInt(10))
+		pledgeValue := transfertype.CalculateNetCapacity(currentNetCapacity)
 		if tx.Value().Cmp(pledgeValue) != 0 || pool.currentState.GetBalance(from).Cmp(pledgeValue) < 0 {
 			return transfertype.ErrInsufficientPledge
 		}
