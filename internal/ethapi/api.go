@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gnc-project/galaxynetwork/common/pidaddress"
+	"github.com/gnc-project/galaxynetwork/pocmine/transfertype"
 	"math/big"
 	"strings"
 	"time"
@@ -677,6 +678,8 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 	return (*hexutil.Big)(state.GetBalance(address)), state.Error()
 }
 
+// ******************************************poc************************
+
 func (s *PublicBlockChainAPI) GetAllPledgeAmount(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
@@ -684,6 +687,18 @@ func (s *PublicBlockChainAPI) GetAllPledgeAmount(ctx context.Context, address co
 	}
 	return (*hexutil.Big)(state.GetTotalPledgeAmount(address)), state.Error()
 }
+
+func (s *PublicBlockChainAPI) GetTotalCapacity(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
+	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	if state == nil || err != nil {
+		return nil, err
+	}
+	if state == nil || err != nil {
+		return nil, err
+	}
+	return (*hexutil.Big)(state.GetTotalCapacity(address)), state.Error()
+}
+
 // GetTotalLockedFunds returns the amount of wei for the given address in the state of the
 // given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 func (s *PublicBlockChainAPI) GetTotalLockedFunds(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
@@ -691,7 +706,8 @@ func (s *PublicBlockChainAPI) GetTotalLockedFunds(ctx context.Context, address c
 	if state == nil || err != nil {
 		return nil, err
 	}
-	return (*hexutil.Big)(state.GetTotalLockedFunds(address)), state.Error()
+	number := new(big.Int).SetUint64(uint64(s.BlockNumber()+10000))
+	return (*hexutil.Big)(ethash.CalculateAmountUnlocked(number,state.GetFunds(address))), state.Error()
 }
 
 func (s *PublicBlockChainAPI) GetCanRedeemList(ctx context.Context, address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (common.CanRedeemList, error) {
@@ -709,12 +725,12 @@ func (s *PublicBlockChainAPI) GetStakingByAddr(ctx context.Context, address comm
 	}
 	return state.GetStakingByAddr(address), state.Error()
 }
-func (s *PublicBlockChainAPI) GetRedeemAmount(ctx context.Context, address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (*big.Int, error) {
+func (s *PublicBlockChainAPI) GetRedeemAmount(ctx context.Context, address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
 		return nil, err
 	}
-	return state.GetRedeemAmount(address,s.b.CurrentBlock().NumberU64()), state.Error()
+	return (*hexutil.Big)(state.GetRedeemAmount(address,s.b.CurrentBlock().NumberU64())), state.Error()
 }
 
 func (s *PublicBlockChainAPI) GetAllStakingList(ctx context.Context,blockNrOrHash rpc.BlockNumberOrHash) (common.StakingList, error) {
@@ -722,23 +738,28 @@ func (s *PublicBlockChainAPI) GetAllStakingList(ctx context.Context,blockNrOrHas
 	if state == nil || err != nil {
 		return nil, err
 	}
-	return state.GetAllStaking(), state.Error()
+	list := state.GetAllStakingList()[:50]
+	if list.Len() <= 50 {
+		return list,state.Error()
+	}
+	return list[:50], state.Error()
 }
 
-func (s *PublicBlockChainAPI) GetUnlockStakingValue(ctx context.Context,address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (*big.Int, error) {
+func (s *PublicBlockChainAPI) GetUnlockStakingValue(ctx context.Context,address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
 		return nil, err
 	}
-	return state.GetUnlockStakingValue(address,s.b.CurrentBlock().NumberU64()), state.Error()
+	return (*hexutil.Big)(state.GetUnlockStakingValue(address,s.b.CurrentBlock().NumberU64())), state.Error()
 }
 
-func (s *PublicBlockChainAPI) GetUnlockVestedFunds(ctx context.Context,address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (*big.Int, error) {
+func (s *PublicBlockChainAPI) GetAmountUnlocked(ctx context.Context,address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
 		return nil, err
 	}
-	return state.UnlockVestedFunds(s.b.CurrentBlock().Number(),address), state.Error()
+	number := new(big.Int).SetUint64(uint64(s.BlockNumber()))
+	return (*hexutil.Big)(ethash.CalculateAmountUnlocked(number,state.GetFunds(address))), state.Error()
 }
 
 func (s *PublicBlockChainAPI) VerifyPid(ctx context.Context, address common.Address, pidHex string, blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
@@ -746,14 +767,9 @@ func (s *PublicBlockChainAPI) VerifyPid(ctx context.Context, address common.Addr
 	if state == nil || err != nil {
 		return false, err
 	}
-	if strings.Contains(pidHex, "0x") {
-		pidHex = pidHex[2:]
-	}
-	key, err := hex.DecodeString(pidHex)
-	if err != nil {
-		return false, err
-	}
-	return state.VerifyPid(pidaddress.PIDAddress(address,key), address), state.Error()
+	pid := common.HexToHash(pidHex)
+
+	return state.VerifyPid(pidaddress.PIDAddress(address,pid[:]), address), state.Error()
 }
 
 // Result structs for GetProof
@@ -766,9 +782,7 @@ type AccountResult struct {
 	StorageHash  common.Hash     `json:"storageHash"`
 	StorageProof []StorageResult `json:"storageProof"`
 
-	Pledge *hexutil.Big `json:"pledge"`
-
-	TotalLockedFunds *hexutil.Big `json:"totalLockedFunds"`
+	PledgedAmount *hexutil.Big `json:"pledgedAmount"`
 }
 
 type StorageResult struct {
@@ -1156,19 +1170,36 @@ func DoEstimateGas(ctx context.Context, b Backend, args TransactionArgs, blockNr
 		balance := state.GetBalance(*args.From) // from can't be nil
 		available := new(big.Int).Set(balance)
 		if args.Value != nil {
-			if len(args.data())>6&&strings.EqualFold(hex.EncodeToString(args.data()[:6]),"0x"+hex.EncodeToString([]byte("redeem"))){
+
+			switch hex.EncodeToString(args.data()) {
+
+			case transfertype.Redeem:
 				if args.Value.ToInt().Cmp(state.GetRedeemAmount(*args.From,b.CurrentHeader().Number.Uint64()))>0{
 					return 0, errors.New("insufficient funds for redeem")
 				}
-			}else{
+			case transfertype.UnlockReward:
+				unlockValue := ethash.CalculateAmountUnlocked(b.CurrentBlock().Number(),state.GetFunds(args.from()))
+				if args.Value.ToInt().Cmp(unlockValue) != 0{
+					return 0,errors.New("insufficient funds for unlockReward")
+				}
+			case transfertype.DelPid:
+				if !state.VerifyPid(*args.To,args.from()) {
+					return 0,errors.New("not pledged for delpid")
+				}
+			case transfertype.UnlockStaking:
+				unlockValue:=state.GetUnlockStakingValue(args.from(),b.CurrentBlock().Number().Uint64())
+				if args.Value.ToInt().Cmp(unlockValue) != 0{
+					return 0,errors.New("insufficient funds for unlockStaking")
+				}
+			default:
 				if args.Value.ToInt().Cmp(available) >= 0 {
 					return 0, errors.New("insufficient funds for transfer")
 				}
 				available.Sub(available, args.Value.ToInt())
 			}
 		}
-		allowance := new(big.Int).Div(available, feeCap)
 
+		allowance := new(big.Int).Div(available, feeCap)
 		// If the allowance is larger than maximum uint64, skip checking
 		if allowance.IsUint64() && hi > allowance.Uint64() {
 			transfer := args.Value

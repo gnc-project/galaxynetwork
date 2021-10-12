@@ -611,7 +611,6 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 			Root             common.Hash
 			CodeHash         []byte
 
-			TotalLockedFunds *big.Int //lock coinbase
 			Funds common.MinedBlocks //Balance of miners Fund by BlockNumber
 
 			Staking common.StakingList
@@ -638,7 +637,7 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 				}
 				snapRecoveredAccountMeter.Mark(1)
 			} else {
-				data := SlimAccountRLP(acc.Nonce, acc.Balance, acc.Root, acc.CodeHash, acc.TotalLockedFunds,
+				data := SlimAccountRLP(acc.Nonce, acc.Balance, acc.Root, acc.CodeHash,
 					acc.Funds,acc.Staking,acc.CanRedeem,acc.Binding,acc.PledgedAmount,acc.TotalPledgedAmount,acc.TotalCapacity)
 				dataLen = len(data)
 				rawdb.WriteAccountSnapshot(batch, accountHash, data)

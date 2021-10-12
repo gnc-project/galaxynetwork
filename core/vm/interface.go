@@ -77,6 +77,7 @@ type StateDB interface {
 
 	//*******************************poc**********************
 	PledgeBinding(common.Address, common.Address)
+	VerifyPid(common.Address, common.Address) bool
 	DeleteBinding(common.Address)
 
 	GetPledgeAmount(common.Address, common.Address) *big.Int
@@ -91,10 +92,8 @@ type StateDB interface {
 	GetTotalCapacity(common.Address) *big.Int
 
 
-	SetTotalLockedFunds(common.Address, *big.Int)
-	SubTotalLockedFunds(common.Address, *big.Int)
-	GetTotalLockedFunds( common.Address) *big.Int
     SetFunds(common.Address, common.MinedBlocks)
+	GetFunds(addr common.Address) common.MinedBlocks
 
 	AddCanRedeem(common.Address,  uint64, *big.Int)
 	SubCanRedeem(common.Address, int64)
@@ -105,6 +104,7 @@ type StateDB interface {
 
 	AddStakingList(common.Address, *common.Staking)
 	SubStakingList(common.Address, uint64)
+	GetAllStakingList() common.StakingList
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM

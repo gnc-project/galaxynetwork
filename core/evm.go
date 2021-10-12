@@ -18,14 +18,12 @@ package core
 
 import (
 	"encoding/hex"
-	"fmt"
+	"github.com/gnc-project/galaxynetwork/consensus/ethash"
 	"math/big"
 	"strconv"
 
 	"github.com/gnc-project/galaxynetwork/common"
 	"github.com/gnc-project/galaxynetwork/consensus"
-	"github.com/gnc-project/galaxynetwork/consensus/ethash"
-	"github.com/gnc-project/galaxynetwork/core/state"
 	"github.com/gnc-project/galaxynetwork/core/types"
 	"github.com/gnc-project/galaxynetwork/core/vm"
 	"github.com/gnc-project/galaxynetwork/rewardc"
@@ -60,8 +58,8 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 	}
 	return vm.BlockContext{
 		CanTransfer:          CanTransfer,
-		CanRedeem:            CanRedeem,
 		Transfer:             Transfer,
+		CanRedeem:            CanRedeem,
 		PledgeTransfer:       PledgeTransfer,
 		RedeemTransfer:       RedeemTransfer,
 		DelectPidTransfer:    DeletePidTransfer,
@@ -127,10 +125,8 @@ func CanTransfer(db vm.StateDB, addr common.Address, amount *big.Int) bool {
 }
 
 func CanRedeem(db vm.StateDB, addr common.Address, amount *big.Int,number *big.Int) bool {
-
 	redeemAmount:=db.GetRedeemAmount(addr,number.Uint64())
 	return redeemAmount.Cmp(amount) >= 0
-
 }
 
 // Transfer subtracts amount from sender and adds amount to recipient using the given Db
@@ -157,13 +153,11 @@ func DeletePidTransfer(db vm.StateDB, sender, recipient common.Address,number *b
 	}
 
 	db.DeleteBinding(recipient)
-	db.SetPledgeAmount(recipient,common.Big0)
+	db.SetPledgeAmount(recipient,big.NewInt(0))
 	db.SubTotalPledgeAmount(sender,redeemAmount)
 	db.SubTotalCapacity(sender,big.NewInt(rewardc.BaseCapacity))
 
 	if new(big.Int).Div(db.GetTotalCapacity(sender),big.NewInt(rewardc.BasePB)).Uint64() < rewardc.TotalCapacity{
-		lockedFunds := db.GetTotalLockedFunds(sender)
-		db.SubTotalLockedFunds(sender,lockedFunds)
 		db.SetFunds(sender,common.MinedBlocks{})
 	}
 
@@ -172,25 +166,34 @@ func DeletePidTransfer(db vm.StateDB, sender, recipient common.Address,number *b
 }
 
 // RedeemTransfer 2
-func RedeemTransfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int,number *big.Int){
-	CanRedeemList:=db.GetCanRedeem(sender)
+func RedeemTransfer(db vm.StateDB, sender common.Address,number *big.Int){
+
+	CanRedeemList := db.GetCanRedeem(sender)
 	for index,canRedeem:=range CanRedeemList{
-		fmt.Println("recipient-->",recipient.Hex(),"canRedeem.UnlockBlock",canRedeem.UnlockBlock,"number",number)
+
 		if canRedeem.UnlockBlock<number.Uint64(){
 			db.SubCanRedeem(sender,int64(index))
-			fmt.Println("recipient-->",recipient.Hex(),"canRedeem.RedeemAmount++++++",canRedeem.RedeemAmount)
-			db.AddBalance(recipient,canRedeem.RedeemAmount)
+			db.AddBalance(sender,canRedeem.RedeemAmount)
 		}
+
 	}
 }
 
 // UnlockRewardTransfer Linear release
-func UnlockRewardTransfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int, number *big.Int) {
-	rewardToLock, available, lockedRewardVestingSpec := ethash.LockedRewardFromReward(big.NewInt(0))
+func UnlockRewardTransfer(db vm.StateDB, sender common.Address, number *big.Int) {
 
-	amountUnlocked := ethash.SetLockedFunds(rewardToLock, lockedRewardVestingSpec, db.(*state.StateDB), recipient, number)
+	funds := db.GetFunds(sender)
+	amountUnlocked := ethash.CalculateAmountUnlocked(number,funds)
+	db.AddBalance(sender, amountUnlocked)
 
-	db.AddBalance(recipient, new(big.Int).Add(available, amountUnlocked))
+	for k,v := range funds {
+		if v.BlockNumber.Cmp(number) > 0 {
+			funds = funds[k:]
+			break
+		}
+	}
+
+	db.SetFunds(sender,funds)
 }
 
 func StakingTransfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int,data []byte,number *big.Int){
@@ -219,7 +222,7 @@ func StakingTransfer(db vm.StateDB, sender, recipient common.Address, amount *bi
 	}
 	
 	stakingInfo.Weight=new(big.Int).Mul(new(big.Int).SetUint64(rewardc.StakingBase[frozenPeriod]),stakingInfo.Value)
-	staking:=&common.Staking{
+	staking := &common.Staking{
 		Address:&sender,
 		StakingInfo:append([]struct{Value *big.Int; Weight *big.Int; StopBlock uint64; StartBlock uint64}{},stakingInfo),
 		TotalValue:stakingInfo.Value,

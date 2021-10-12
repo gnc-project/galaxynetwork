@@ -34,7 +34,6 @@ type Account struct {
 	Root     []byte
 	CodeHash []byte
 
-	TotalLockedFunds *big.Int //lock coinbase
 	Funds common.MinedBlocks //Balance of miners Fund by BlockNumber
 
 	Staking common.StakingList
@@ -48,13 +47,12 @@ type Account struct {
 }
 
 // SlimAccount converts a state.Account content into a slim snapshot account
-func SlimAccount(nonce uint64, balance *big.Int, root common.Hash, codehash []byte, totalLockedFunds *big.Int,
-	funds common.MinedBlocks,staking common.StakingList,canRedeem common.CanRedeemList,binding common.Address,
+func SlimAccount(nonce uint64, balance *big.Int, root common.Hash, codehash []byte,funds common.MinedBlocks,
+	staking common.StakingList,canRedeem common.CanRedeemList,binding common.Address,
 	pledgedAmount *big.Int,totalPledgedAmount *big.Int, totalCapacity *big.Int) Account {
 	slim := Account{
 		Nonce:            	nonce,
 		Balance:          	balance,
-		TotalLockedFunds: 	totalLockedFunds,
 		CanRedeem:        	canRedeem,
 		Funds:            	funds,
 		Staking:          	staking,
@@ -74,10 +72,10 @@ func SlimAccount(nonce uint64, balance *big.Int, root common.Hash, codehash []by
 
 // SlimAccountRLP converts a state.Account content into a slim snapshot
 // version RLP encoded.
-func SlimAccountRLP(nonce uint64, balance *big.Int, root common.Hash, codehash []byte, totalLockedFunds *big.Int,
+func SlimAccountRLP(nonce uint64, balance *big.Int, root common.Hash, codehash []byte,
 	funds common.MinedBlocks,staking common.StakingList,canRedeem common.CanRedeemList,
 	binding common.Address,pledgedAmount *big.Int,totalPledgedAmount *big.Int, totalCapacity *big.Int) []byte {
-	data, err := rlp.EncodeToBytes(SlimAccount(nonce, balance, root, codehash, totalLockedFunds, funds,staking,canRedeem,
+	data, err := rlp.EncodeToBytes(SlimAccount(nonce, balance, root, codehash, funds,staking,canRedeem,
 		binding,pledgedAmount,totalPledgedAmount,totalCapacity))
 	if err != nil {
 		panic(err)

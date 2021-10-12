@@ -57,13 +57,6 @@ var (
 	// have enough funds for transfer(topmost call only).
 	ErrInsufficientFundsForTransfer = errors.New("insufficient funds for transfer")
 
-	ErrInsufficientFundsForUnlockStaking = errors.New("insufficient funds for unlockStaking")
-
-	ErrInsufficientFundsForRedeem = errors.New("insufficient for redeem")
-
-	ErrInsufficientStakingValue = errors.New("The staking amount is too small,Minimum 1000")
-
-
 	// ErrInsufficientFunds is returned if the total cost of executing a transaction
 	// is higher than the balance of the user's account.
 	ErrInsufficientFunds = errors.New("insufficient funds for gas * price + value")

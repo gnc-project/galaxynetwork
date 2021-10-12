@@ -2148,7 +2148,7 @@ func (s *Syncer) forwardAccountTask(task *accountTask) {
 			break
 		}
 		slim := snapshot.SlimAccountRLP(res.accounts[i].Nonce, res.accounts[i].Balance, res.accounts[i].Root, res.accounts[i].CodeHash,
-			res.accounts[i].TotalLockedFunds, res.accounts[i].Funds, res.accounts[i].Staking,res.accounts[i].CanRedeem,
+			 res.accounts[i].Funds, res.accounts[i].Staking,res.accounts[i].CanRedeem,
 			res.accounts[i].Binding,res.accounts[i].PledgedAmount,res.accounts[i].TotalPledgedAmount,res.accounts[i].TotalCapacity)
 		rawdb.WriteAccountSnapshot(batch, hash, slim)
 
@@ -2746,7 +2746,7 @@ func (s *Syncer) onHealState(paths [][]byte, value []byte) error {
 		if err := rlp.DecodeBytes(value, &account); err != nil {
 			return nil
 		}
-		blob := snapshot.SlimAccountRLP(account.Nonce, account.Balance, account.Root, account.CodeHash, account.TotalLockedFunds,
+		blob := snapshot.SlimAccountRLP(account.Nonce, account.Balance, account.Root, account.CodeHash,
 			account.Funds,account.Staking,account.CanRedeem,account.Binding,account.PledgedAmount,account.TotalPledgedAmount,account.TotalCapacity)
 		rawdb.WriteAccountSnapshot(s.stateWriter, common.BytesToHash(paths[0]), blob)
 		s.accountHealed += 1

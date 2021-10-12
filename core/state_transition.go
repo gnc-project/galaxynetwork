@@ -19,16 +19,16 @@ package core
 import (
 	"encoding/hex"
 	"fmt"
-	"math"
-	"math/big"
-	"strings"
-
 	"github.com/gnc-project/galaxynetwork/common"
 	cmath "github.com/gnc-project/galaxynetwork/common/math"
+	"github.com/gnc-project/galaxynetwork/consensus/ethash"
 	"github.com/gnc-project/galaxynetwork/core/types"
 	"github.com/gnc-project/galaxynetwork/core/vm"
 	"github.com/gnc-project/galaxynetwork/crypto"
 	"github.com/gnc-project/galaxynetwork/params"
+	"github.com/gnc-project/galaxynetwork/pocmine/transfertype"
+	"math"
+	"math/big"
 )
 
 var emptyCodeHash = crypto.Keccak256Hash(nil)
@@ -313,27 +313,28 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	}
 
 	// Check clause 6
-	//new gnc
-	if len(snapdata)>6{
-		if msg.Value().Sign() > 0 &&!strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("redeem")))&&strings.EqualFold(hex.EncodeToString(snapdata),hex.EncodeToString([]byte("unlockStaking")))&&!st.evm.Context.CanTransfer(st.state, msg.From(),msg.Value()) {
-			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
-		}else{
-			if strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("redeem")))&&!st.evm.Context.CanRedeem(st.state, msg.From(), msg.Value(),st.evm.Context.BlockNumber) {
-				return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForRedeem, msg.From().Hex())
-			}
+	switch hex.EncodeToString(snapdata[:6]) {
+	case transfertype.Redeem:
+		if !st.evm.Context.CanRedeem(st.state, msg.From(), msg.Value(),st.evm.Context.BlockNumber) {
+			return nil, fmt.Errorf("%w: address %v", transfertype.ErrInsufficientFundsForRedeem, msg.From().Hex())
 		}
-    }else{
-		if msg.Value().Sign() > 0 &&!st.evm.Context.CanTransfer(st.state, msg.From(),msg.Value()) {
-			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
+	case transfertype.DelPid:
+		if !st.state.VerifyPid(*msg.To(),msg.From()) {
+			return nil, fmt.Errorf("%w: address %v",transfertype.ErrNotPledged,msg.From().Hex())
 		}
-	}
-	
-
-	if strings.EqualFold(hex.EncodeToString(snapdata),hex.EncodeToString([]byte("unlockStaking"))){
+	case transfertype.UnlockReward:
+		unlockValue := ethash.CalculateAmountUnlocked(st.evm.Context.BlockNumber,st.state.GetFunds(msg.From()))
+		if msg.Value().Cmp(unlockValue) != 0{
+			return nil,transfertype.ErrInsufficientUnlockRewardValue
+		}
+	case transfertype.UnlockStaking:
 		unlockValue:=st.evm.StateDB.GetUnlockStakingValue(msg.From(),st.evm.Context.BlockNumber.Uint64())
-
 		if unlockValue.Cmp(msg.Value())!=0{
-			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForUnlockStaking, msg.From().Hex())
+			return nil, fmt.Errorf("%w: address %v", transfertype.ErrInsufficientFundsForUnlockStaking, msg.From().Hex())
+		}
+	default:
+		if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.From(),msg.Value()) {
+			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
 		}
 	}
 

@@ -470,7 +470,7 @@ func (s *StateDB) updateStateObject(obj *stateObject) {
 	// at transaction boundary level to ensure we capture state clearing.
 	if s.snap != nil {
 		s.snapAccounts[obj.addrHash] = snapshot.SlimAccountRLP(obj.data.Nonce, obj.data.Balance, obj.data.Root, obj.data.CodeHash,
-			obj.data.TotalLockedFunds, obj.data.Funds,obj.data.Staking,obj.data.CanRedeem,
+			obj.data.Funds,obj.data.Staking,obj.data.CanRedeem,
 			obj.data.Binding,obj.data.PledgedAmount,obj.data.TotalPledgedAmount,obj.data.TotalCapacity)
 	}
 }
@@ -526,13 +526,13 @@ func (s *StateDB) getDeletedStateObject(addr common.Address) *stateObject {
 				Balance:          acc.Balance,
 				CodeHash:         acc.CodeHash,
 				Root:             common.BytesToHash(acc.Root),
-				TotalLockedFunds: acc.TotalLockedFunds,
 				CanRedeem:        acc.CanRedeem,
 				Funds:            acc.Funds,
 				Staking:          acc.Staking,
 				Binding: 		  acc.Binding,
 				PledgedAmount:    acc.PledgedAmount,
-				TotalPledgedAmount: acc.TotalLockedFunds,
+				TotalPledgedAmount: acc.TotalPledgedAmount,
+				TotalCapacity: acc.TotalCapacity,
 			}
 			if len(data.CodeHash) == 0 {
 				data.CodeHash = emptyCodeHash
@@ -619,6 +619,13 @@ func (s *StateDB) CreateAccount(addr common.Address) {
 	newObj, prev := s.createObject(addr)
 	if prev != nil {
 		newObj.setBalance(prev.data.Balance)
+		newObj.setFunds(prev.data.Funds)
+		newObj.setStakingList(prev.data.Staking)
+		newObj.setCanRedeem(prev.data.CanRedeem)
+		newObj.setBinding(prev.data.Binding)
+		newObj.setPledgeAmount(prev.data.PledgedAmount)
+		newObj.setTotalPledgeAmount(prev.data.TotalPledgedAmount)
+		newObj.setTotalCapacity(prev.data.TotalCapacity)
 	}
 }
 
@@ -1068,15 +1075,6 @@ func (s *StateDB) GetStakingByAddr(addr common.Address) *common.Staking {
 	return nil
 }
 
-func (s *StateDB) GetAllStaking() common.StakingList {
-	stateObject := s.getStateObject(common.AllStakingDB)
-	if stateObject != nil {
-		return stateObject.AllStaking()
-	}
-	return nil
-}
-
-
 func (s *StateDB) VerifyPid(pidAdr common.Address, addr common.Address) bool {
 	stateObject := s.getStateObject(pidAdr)
 	if stateObject != nil {
@@ -1086,16 +1084,10 @@ func (s *StateDB) VerifyPid(pidAdr common.Address, addr common.Address) bool {
 			}
 		}
 	}
+
 	return false
 }
 
-
-func (s *StateDB) AddTotalLockedFunds(addr common.Address, amount *big.Int) {
-	stateObject := s.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.AddTotalLockedFunds(amount)
-	}
-}
 
 func (s *StateDB)PledgeBinding(pidAdr common.Address, addr common.Address) {
 	stateObject := s.GetOrNewStateObject(pidAdr)
@@ -1112,7 +1104,7 @@ func (s *StateDB)DeleteBinding(pidAdr common.Address) {
 }
 
 func (s *StateDB)GetPledgeAmount(pidAdr common.Address, addr common.Address) *big.Int{
-	stateObject := s.GetOrNewStateObject(pidAdr)
+	stateObject := s.getStateObject(pidAdr)
 	if stateObject != nil {
 		if stateObject.Binding() == addr {
 			return stateObject.PledgeAmount()
@@ -1143,10 +1135,11 @@ func (s *StateDB)SubTotalPledgeAmount(addr common.Address, amount *big.Int) {
 }
 
 func (s *StateDB)GetTotalPledgeAmount(addr common.Address) *big.Int  {
-	stateObject := s.GetOrNewStateObject(addr)
+	stateObject := s.getStateObject(addr)
 	if stateObject != nil {
 		return stateObject.TotalPledgeAmount()
 	}
+
 	return common.Big0
 }
 
@@ -1165,36 +1158,13 @@ func (s *StateDB)SubTotalCapacity(addr common.Address,cap *big.Int)  {
 }
 
 func (s *StateDB)GetTotalCapacity(addr common.Address) *big.Int  {
-	stateObject := s.GetOrNewStateObject(addr)
+	stateObject := s.getStateObject(addr)
 	if stateObject != nil {
 		return stateObject.TotalCapacity()
 	}
 	return common.Big0
 }
 
-func (s *StateDB) SetTotalLockedFunds(addr common.Address, amount *big.Int) {
-	stateObject := s.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.SetTotalLockedFunds(amount)
-	}
-}
-
-// SubPledge subtracts amount from the account associated with addr.
-func (s *StateDB) SubTotalLockedFunds(addr common.Address, amount *big.Int) {
-	stateObject := s.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.SubTotalLockedFunds(amount)
-	}
-}
-
-func (s *StateDB) GetTotalLockedFunds(addr common.Address) *big.Int {
-	stateObject := s.getStateObject(addr)
-	if stateObject != nil {
-		return stateObject.TotalLockedFunds()
-	}
-
-	return common.Big0
-}
 
 func (s *StateDB) SetFunds(addr common.Address, funds common.MinedBlocks) {
 	stateObject := s.GetOrNewStateObject(addr)
@@ -1271,29 +1241,9 @@ func (s *StateDB) SubStakingList(addr common.Address,nowHeight uint64) {
 	}
 }
 func (s *StateDB) GetAllStakingList() common.StakingList{
-	stateObject := s.GetOrNewStateObject(common.AllStakingDB)
+	stateObject := s.getStateObject(common.AllStakingDB)
 	if stateObject != nil {
 		return stateObject.AllStaking()
 	}
 	return nil
-}
-
-
-func (s *StateDB) UnlockVestedFunds(num *big.Int, addr common.Address) *big.Int {
-	amountUnlocked := common.Big0
-
-	lastIndexToRemove := -1
-	for i, vf := range s.GetFunds(addr) {
-		if vf.BlockNumber.Cmp(num) >= 0 {
-			break
-		}
-		amountUnlocked.Add(amountUnlocked, vf.Amount)
-		lastIndexToRemove = i
-	}
-
-	if lastIndexToRemove != -1 {
-		s.SetFunds(addr, s.GetFunds(addr)[lastIndexToRemove+1:])
-	}
-
-	return amountUnlocked
 }

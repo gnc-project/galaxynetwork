@@ -86,16 +86,10 @@ func (j *journal) length() int {
 
 type (
 
-	totalLockedFundsChange struct {
-		account *common.Address
-		prev    *big.Int
-	}
-
 	fundsChange struct {
 		account *common.Address
 		prev   	common.MinedBlocks
 	}
-
 
 	stakingListChange struct {
 		account *common.Address
@@ -261,14 +255,6 @@ func (ch fundsChange) revert(s *StateDB) {
 }
 
 func (ch fundsChange) dirtied() *common.Address {
-	return ch.account
-}
-
-func (ch totalLockedFundsChange) revert(s *StateDB) {
-	s.getStateObject(*ch.account).setTotalLockedFunds(ch.prev)
-}
-
-func (ch totalLockedFundsChange) dirtied() *common.Address {
 	return ch.account
 }
 

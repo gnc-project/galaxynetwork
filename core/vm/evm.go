@@ -18,14 +18,13 @@ package vm
 
 import (
 	"encoding/hex"
+	"github.com/gnc-project/galaxynetwork/pocmine/transfertype"
 	"github.com/gnc-project/galaxynetwork/rewardc"
 	"math/big"
-	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/gnc-project/galaxynetwork/common"
-	"github.com/gnc-project/galaxynetwork/common/hexutil"
 	"github.com/gnc-project/galaxynetwork/crypto"
 	"github.com/gnc-project/galaxynetwork/params"
 	"github.com/holiman/uint256"
@@ -38,15 +37,16 @@ var emptyCodeHash = crypto.Keccak256Hash(nil)
 type (
 	// CanTransferFunc is the signature of a transfer guard function
 	CanTransferFunc func(StateDB, common.Address, *big.Int) bool
-
-	CanRedeemFunc func(StateDB, common.Address,*big.Int,*big.Int) bool 
 	// TransferFunc is the signature of a transfer function
 	TransferFunc func(StateDB, common.Address, common.Address, *big.Int)
+
+	CanRedeemFunc func(StateDB, common.Address,*big.Int,*big.Int) bool 
+
 	PledgeFunc   func(StateDB, common.Address, common.Address, *big.Int)
-	RedeemFunc   func(StateDB, common.Address, common.Address, *big.Int,*big.Int)
+	RedeemFunc   func(StateDB, common.Address,*big.Int)
 	DelectPidFunc   func(StateDB, common.Address, common.Address,*big.Int)
 
-	UnlockRewardTransferFunc func(StateDB, common.Address, common.Address, *big.Int, *big.Int)
+	UnlockRewardTransferFunc func(StateDB, common.Address, *big.Int)
 
 	StakingTransferFunc func(StateDB, common.Address, common.Address, *big.Int, []byte,*big.Int)
 
@@ -231,22 +231,23 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		}
 		evm.StateDB.CreateAccount(addr)
 	}
-	
-	if len(snapdata) > 6 && strings.EqualFold(hex.EncodeToString(snapdata[:6]), hex.EncodeToString([]byte("pledge"))) && (caller.Address() == addr) {	
-		evm.Context.PledgeTransfer(evm.StateDB, caller.Address(), addr, value)
-		capacity = big.NewInt(int64(len(hexutil.SlitData(input)) * rewardc.BaseCapacity))
-	}else if len(snapdata) > 6&&strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("redeem")))&&(caller.Address()==addr){
-		evm.Context.RedeemTransfer(evm.StateDB, caller.Address(), addr, value,evm.Context.BlockNumber)
-	}else if len(snapdata) > 6&&strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("delPid")))&&(caller.Address()==addr){
-		evm.Context.DelectPidTransfer(evm.StateDB, caller.Address(), addr,evm.Context.BlockNumber)
-		capacity=new(big.Int).Mul(big.NewInt(int64(len(hexutil.SlitData(input)) * rewardc.BaseCapacity)),big.NewInt(-1))
-	} else if strings.EqualFold(hex.EncodeToString(snapdata), hex.EncodeToString([]byte("unlockReward"))) && (caller.Address() == addr) {
-		evm.Context.UnlockRewardTransfer(evm.StateDB, caller.Address(), addr, value, evm.Context.BlockNumber)
-	}else if len(snapdata) > 7&&strings.EqualFold(hex.EncodeToString(snapdata[:7]), hex.EncodeToString([]byte("staking"))) && (caller.Address() == addr) {
-		evm.Context.StakingTransfer(evm.StateDB, caller.Address(), addr, value,input,evm.Context.BlockNumber)
-	}else if strings.EqualFold(hex.EncodeToString(snapdata), hex.EncodeToString([]byte("unlockStaking"))) && (caller.Address() == addr){
-		evm.Context.UnlockStakingTransfer(evm.StateDB, caller.Address(), addr, value,evm.Context.BlockNumber)
-	}else {
+
+	switch hex.EncodeToString(snapdata) {
+		case transfertype.Pledge:
+			evm.Context.PledgeTransfer(evm.StateDB, caller.Address(), addr, value)
+			capacity = big.NewInt(rewardc.BaseCapacity)
+		case transfertype.Redeem:
+			evm.Context.RedeemTransfer(evm.StateDB, caller.Address(),evm.Context.BlockNumber)
+		case transfertype.DelPid:
+			evm.Context.DelectPidTransfer(evm.StateDB, caller.Address(), addr,evm.Context.BlockNumber)
+			capacity=new(big.Int).Mul(big.NewInt(rewardc.BaseCapacity),big.NewInt(-1))
+		case transfertype.UnlockReward:
+			evm.Context.UnlockRewardTransfer(evm.StateDB, caller.Address(), evm.Context.BlockNumber)
+		case transfertype.Staking:
+			evm.Context.StakingTransfer(evm.StateDB, caller.Address(), addr, value,input,evm.Context.BlockNumber)
+		case transfertype.UnlockStaking:
+			evm.Context.UnlockStakingTransfer(evm.StateDB, caller.Address(), addr, value,evm.Context.BlockNumber)
+		default:
 		evm.Context.Transfer(evm.StateDB, caller.Address(), addr, value)
 	}
 

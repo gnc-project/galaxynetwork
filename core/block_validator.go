@@ -20,8 +20,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/gnc-project/galaxynetwork/common/pidaddress"
-	"math/big"
-	"strings"
 	"time"
 
 	"github.com/gnc-project/galaxynetwork/consensus"
@@ -76,47 +74,6 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 			return consensus.ErrUnknownAncestor
 		}
 		return consensus.ErrPrunedAncestor
-	}
-	transactions := block.Transactions()
-	if len(transactions) > 0 {
-		for i := 0; i < len(transactions); i++ {
-			msg, err := transactions[i].AsMessage(types.MakeSigner(v.config, header.Number), header.BaseFee)
-			if err != nil {
-				return fmt.Errorf("getFromErr :%v", err)
-			}
-			var snapdata []byte
-			if msg.Data() == nil {
-				snapdata = []byte{}
-			} else {
-				snapdata = msg.Data()
-			}
-			if len(snapdata) > 6 && strings.EqualFold(hex.EncodeToString(snapdata[:6]), hex.EncodeToString([]byte("pledge"))) {
-
-				currentNetCapacity:=v.bc.GetBlockByHash(block.ParentHash()).NetCapacity()/1048576
-				switch{
-				case currentNetCapacity<100:
-					currentNetCapacity=1
-				case 100<=currentNetCapacity&&currentNetCapacity<2000:
-					currentNetCapacity=currentNetCapacity/100
-				case 2000<=currentNetCapacity&&currentNetCapacity<10000:
-					currentNetCapacity=currentNetCapacity/1000*10
-				case 10000<=currentNetCapacity&&currentNetCapacity<30000:
-					currentNetCapacity=currentNetCapacity/10000*100
-				default :
-				    currentNetCapacity=300
-				}
-
-				pledgeValue := new(big.Int).Div(rewardc.PledgeBase[currentNetCapacity*100],big.NewInt(10))
-				if msg.Value().Cmp(pledgeValue) < 0 {
-					return fmt.Errorf("invalid pledge tx value (remote: %v local: %v)", msg.Value(), pledgeValue)
-				}
-			}
-			if len(snapdata) > 7&&strings.EqualFold(hex.EncodeToString(snapdata[:7]), hex.EncodeToString([]byte("staking"))){
-				if msg.Value().Cmp(rewardc.StakingLowerLimit)<0{
-					return ErrInsufficientStakingValue
-				}
-			}
-		}
 	}
 	return nil
 }

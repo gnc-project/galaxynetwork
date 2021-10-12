@@ -19,11 +19,11 @@ package core
 import (
 	"encoding/hex"
 	"errors"
-	"fmt"
+	"github.com/gnc-project/galaxynetwork/consensus/ethash"
+	"github.com/gnc-project/galaxynetwork/pocmine/transfertype"
 	"math"
 	"math/big"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -88,13 +88,6 @@ var (
 	// than some meaningful limit a user might use. This is not a consensus error
 	// making the transaction invalid, rather a DOS protection.
 	ErrOversizedData = errors.New("oversized data")
-
-	ErrInsufficientPledge = errors.New("insufficient funds for Pledge")
-	ErrInsufficientRedeem1 = errors.New("insufficient funds for Redeem amount")
-	ErrInsufficientRedeem2 = errors.New("unlockBlock not now")
-
-	ErrInsufficientUnlockStakingValue=errors.New("insufficient funds for UnlockStaking")
-	ErrInsufficientUnlockRewardValue=errors.New("insufficient funds for UnlockReward")
 
 	ErrInsufficientGas = errors.New(" insufficient funds for gas * price")
 )
@@ -640,85 +633,65 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrInsufficientGas
 	}
 
-	if len(snapdata) < 6 {
+	switch hex.EncodeToString(snapdata) {
+
+	case transfertype.Pledge:
+		if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+			return ErrInsufficientFunds
+		}
+		if pool.currentState.VerifyPid(*tx.To(),from){
+			return transfertype.ErrDuplicatePledgedPid
+		}
+		currentNetCapacity := uint64(0)
+		if pool.chain.CurrentBlock().NumberU64() > 0 {
+			currentNetCapacity = pool.chain.GetBlock(pool.chain.CurrentBlock().ParentHash(),pool.chain.CurrentBlock().NumberU64()-1).NetCapacity()/1048576
+		}
+		switch{
+		case currentNetCapacity<100:
+			currentNetCapacity=1
+		case 100<=currentNetCapacity&&currentNetCapacity<2000:
+			currentNetCapacity=currentNetCapacity/100
+		case 2000<=currentNetCapacity&&currentNetCapacity<10000:
+			currentNetCapacity=currentNetCapacity/1000*10
+		case 10000<=currentNetCapacity&&currentNetCapacity<30000:
+			currentNetCapacity=currentNetCapacity/10000*100
+		default :
+			currentNetCapacity=300
+		}
+		pledgeValue :=  new(big.Int).Div(rewardc.PledgeBase[currentNetCapacity*100],big.NewInt(10))
+		if tx.Value().Cmp(pledgeValue) != 0 || pool.currentState.GetBalance(from).Cmp(pledgeValue) < 0 {
+			return transfertype.ErrInsufficientPledge
+		}
+
+	case transfertype.Redeem:
+		redeemAmount := pool.currentState.GetRedeemAmount(from,pool.chain.CurrentBlock().NumberU64())
+		if redeemAmount.Cmp(tx.Value()) < 0 {
+			return transfertype.ErrInsufficientRedeem1
+		}
+	case transfertype.DelPid:
+		 if !pool.currentState.VerifyPid(*tx.To(),from) {
+		 	return transfertype.ErrNotPledged
+		 }
+	case transfertype.UnlockReward:
+		unlockValue := ethash.CalculateAmountUnlocked(pool.chain.CurrentBlock().Number(),pool.currentState.GetFunds(from))
+		if tx.Value().Cmp(unlockValue) != 0{
+			return transfertype.ErrInsufficientUnlockRewardValue
+		}
+	case transfertype.Staking:
 		if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0{
 			return ErrInsufficientFunds
 		}
-	}
-
-    if len(snapdata) >= 6 {
-
-		if  !strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("redeem"))) &&
-			!strings.EqualFold(hex.EncodeToString(snapdata),hex.EncodeToString([]byte("unlockStaking"))) {
-
-			if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0{
-				return ErrInsufficientFunds
-			}
+		if tx.Value().Cmp(rewardc.StakingLowerLimit)<0{
+			return transfertype.ErrInsufficientStakingValue
 		}
-
-		if strings.EqualFold(hex.EncodeToString(snapdata[:6]), hex.EncodeToString([]byte("pledge"))) {
-
-			if pool.currentState.VerifyPid(*tx.To(),from){
-				return errors.New("Duplicate pledged pid")
-			}
-
-			currentNetCapacity := uint64(0)
-			if pool.chain.CurrentBlock().NumberU64() > 0 {
-				currentNetCapacity = pool.chain.GetBlock(pool.chain.CurrentBlock().ParentHash(),pool.chain.CurrentBlock().NumberU64()-1).NetCapacity()/1048576
-			}
-
-			switch{
-			case currentNetCapacity<100:
-				currentNetCapacity=1
-			case 100<=currentNetCapacity&&currentNetCapacity<2000:
-				currentNetCapacity=currentNetCapacity/100
-			case 2000<=currentNetCapacity&&currentNetCapacity<10000:
-				currentNetCapacity=currentNetCapacity/1000*10
-			case 10000<=currentNetCapacity&&currentNetCapacity<30000:
-				currentNetCapacity=currentNetCapacity/10000*100
-			default :
-				currentNetCapacity=300
-			}
-
-			pledgeValue :=  new(big.Int).Div(rewardc.PledgeBase[currentNetCapacity*100],big.NewInt(10))
-			if tx.Value().Cmp(pledgeValue) != 0 || pool.currentState.GetBalance(from).Cmp(pledgeValue) < 0 {
-				fmt.Println("pledgeValue",pledgeValue,"tx.Value",tx.Value())
-				return ErrInsufficientPledge
-			}
+	case transfertype.UnlockStaking:
+		unlockValue:=pool.currentState.GetUnlockStakingValue(from,pool.chain.CurrentBlock().Number().Uint64())
+		if tx.Value().Cmp(unlockValue)!=0{
+			return transfertype.ErrInsufficientUnlockStakingValue
 		}
-
-		if strings.EqualFold(hex.EncodeToString(snapdata[:6]),hex.EncodeToString([]byte("redeem"))){
-
-			redeemAmount := pool.currentState.GetRedeemAmount(from,pool.chain.CurrentBlock().NumberU64())
-			
-			if redeemAmount.Cmp(tx.Value())<0{
-
-				return ErrInsufficientRedeem1
-			}
-		}
-
-		if strings.EqualFold(hex.EncodeToString(snapdata), hex.EncodeToString([]byte("unlockStaking"))){
-
-			unlockValue:=pool.currentState.GetUnlockStakingValue(from,pool.chain.CurrentBlock().Number().Uint64())
-			
-			if tx.Value().Cmp(unlockValue)!=0{
-				return ErrInsufficientUnlockStakingValue
-			}	
-		}
-	
-		if strings.EqualFold(hex.EncodeToString(snapdata), hex.EncodeToString([]byte("unlockReward"))){
-
-			unlockValue := pool.currentState.UnlockVestedFunds(pool.chain.CurrentBlock().Number(),from)
-			
-			if tx.Value().Cmp(unlockValue)!=0{
-				return ErrInsufficientUnlockRewardValue
-			}	
-		}
-		if len(snapdata) > 7 && strings.EqualFold(hex.EncodeToString(snapdata[:7]), hex.EncodeToString([]byte("staking"))){
-
-			if tx.Value().Cmp(rewardc.StakingLowerLimit)<0{
-				return ErrInsufficientStakingValue
-			}
+	default:
+		if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0{
+			return ErrInsufficientFunds
 		}
 	}
 

@@ -18,13 +18,13 @@ package backends
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/gnc-project/galaxynetwork/pocmine/transfertype"
 	"math/big"
 	"sync"
 	"time"
-	"strings"
-	"encoding/hex"
 
 	"github.com/gnc-project/galaxynetwork"
 	"github.com/gnc-project/galaxynetwork/accounts/abi"
@@ -506,23 +506,34 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call ethereum.CallMs
 		balance := b.pendingState.GetBalance(call.From) // from can't be nil
 		available := new(big.Int).Set(balance)
 		if call.Value != nil {
-			if len(call.Data)>6{
-				if !strings.EqualFold(hex.EncodeToString(call.Data[:6]),hex.EncodeToString([]byte("redeem"))){
-					if call.Value.Cmp(available) >= 0 {
-						return 0, errors.New("insufficient funds for transfer")
-					  }
-					  available.Sub(available, call.Value)
-				   }else{
-					   if call.Value.Cmp(b.pendingState.GetRedeemAmount(call.From,b.blockchain.CurrentBlock().Number().Uint64())) >= 0 {
-						   return 0, errors.New("insufficient funds for redeem")
-						 }
-				   }	
-			}else{
+
+
+			switch hex.EncodeToString(call.Data) {
+			case transfertype.Redeem:
+				if call.Value.Cmp(b.pendingState.GetRedeemAmount(call.From,b.pendingBlock.Number().Uint64()))>0{
+					return 0, errors.New("insufficient funds for redeem")
+				}
+			case transfertype.UnlockReward:
+				unlockValue := ethash.CalculateAmountUnlocked(b.pendingBlock.Number(),b.pendingState.GetFunds(call.From))
+				if call.Value.Cmp(unlockValue) != 0{
+					return 0,errors.New("insufficient funds for unlockReward")
+				}
+			case transfertype.DelPid:
+				if !b.pendingState.VerifyPid(*call.To,call.From) {
+					return 0,errors.New("not pledged for delpid")
+				}
+			case transfertype.UnlockStaking:
+				unlockValue:=b.pendingState.GetUnlockStakingValue(call.From, b.pendingBlock.Number().Uint64())
+				if call.Value.Cmp(unlockValue) != 0{
+					return 0,errors.New("insufficient funds for unlockStaking")
+				}
+			default:
 				if call.Value.Cmp(available) >= 0 {
 					return 0, errors.New("insufficient funds for transfer")
-				  }
-				  available.Sub(available, call.Value)
+				}
+				available.Sub(available, call.Value)
 			}
+
 		}
 		allowance := new(big.Int).Div(available, feeCap)
 		if allowance.IsUint64() && hi > allowance.Uint64() {

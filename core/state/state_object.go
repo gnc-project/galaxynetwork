@@ -96,7 +96,7 @@ type stateObject struct {
 
 // empty returns whether the account is considered empty.
 func (s *stateObject) empty() bool {
-	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash)
+	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 &&  s.data.PledgedAmount.Sign() == 0  && len(s.data.Staking) == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash)
 }
 
 // Account is the Ethereum consensus representation of accounts.
@@ -107,7 +107,6 @@ type Account struct {
 	Root     common.Hash // merkle root of the storage trie
 	CodeHash []byte
 
-	TotalLockedFunds *big.Int //lock coinbase
 	Funds common.MinedBlocks //Balance of miners Fund by BlockNumber
 
 	Staking common.StakingList
@@ -133,10 +132,6 @@ func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 
 	if data.CodeHash == nil {
 		data.CodeHash = emptyCodeHash
-	}
-
-	if data.TotalLockedFunds == nil {
-		data.TotalLockedFunds = new(big.Int)
 	}
 
 	if data.PledgedAmount == nil {
@@ -530,35 +525,6 @@ func (s *stateObject) setTotalCapacity(cap *big.Int)  {
 }
 
 
-func (s *stateObject) AddTotalLockedFunds(amount *big.Int) {
-	if amount.Sign() == 0 {
-		if s.empty() {
-			s.touch()
-		}
-		return
-	}
-	s.SetTotalLockedFunds(new(big.Int).Add(s.TotalLockedFunds(), amount))
-}
-
-func (s *stateObject) SubTotalLockedFunds(amount *big.Int) {
-	if amount.Sign() == 0 {
-		return
-	}
-	s.SetTotalLockedFunds(new(big.Int).Sub(s.TotalLockedFunds(), amount))
-}
-
-func (s *stateObject) SetTotalLockedFunds(amount *big.Int) {
-	s.db.journal.append(totalLockedFundsChange{
-		account: &s.address,
-		prev:    new(big.Int).Set(s.data.TotalLockedFunds),
-	})
-	s.setTotalLockedFunds(amount)
-}
-
-func (s *stateObject) setTotalLockedFunds(amount *big.Int) {
-	s.data.TotalLockedFunds = amount
-}
-
 func (s *stateObject) AddTotalPledgeAmount(amount *big.Int)  {
 	if amount.Sign() == 0 {
 		if s.empty() {
@@ -617,11 +583,6 @@ func (s *stateObject) setBinding(ref common.Address) {
 func (s *stateObject) GetRedeemAmount(number uint64)*big.Int{
 	redeemBalance:=big.NewInt(0)
 	for _,canRedeem:=range s.CanRedeem(){
-		if s.address == common.HexToAddress("0xe1500ea2146dc05cd55b1b33bb5ad277141a5f4d") {
-			fmt.Println("number",number,"addr",s.address.Hex(),
-				"canRedeem.RedeemAmount",canRedeem.RedeemAmount,
-				"canRedeem.UnlockBlock",canRedeem.UnlockBlock)
-		}
 		if canRedeem.UnlockBlock<number{
 			redeemBalance=new(big.Int).Add(redeemBalance,canRedeem.RedeemAmount)
 		}
@@ -824,10 +785,6 @@ func (s *stateObject) TotalCapacity() *big.Int  {
 	return s.data.TotalCapacity
 }
 
-func (s *stateObject) TotalLockedFunds() *big.Int {
-	return s.data.TotalLockedFunds
-}
-
 func (s *stateObject) Funds() common.MinedBlocks {
 	return s.data.Funds
 }
@@ -847,7 +804,6 @@ func (s *stateObject) StakingByAddr(addr common.Address)*common.Staking {
 }
 
 func (s *stateObject) AllStaking()common.StakingList{
-
 	return s.data.Staking
 }
 

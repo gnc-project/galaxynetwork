@@ -463,6 +463,32 @@ web3._extend({
 	property: 'eth',
 	methods: [
 		new web3._extend.Method({
+			name: 'minerInfo',
+			call: 'eth_minerInfo',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getAllPledgeAmount',
+			call: 'eth_getAllPledgeAmount',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'getTotalCapacity',
+			call: 'eth_getTotalCapacity',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'getTotalLockedFunds',
+			call: 'eth_getTotalLockedFunds',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}), 
+		new web3._extend.Method({
 			name: 'chainId',
 			call: 'eth_chainId',
 			params: 0

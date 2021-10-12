@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/gnc-project/galaxynetwork/common"
 	"github.com/gnc-project/galaxynetwork/common/math"
@@ -37,6 +38,50 @@ type diffTest struct {
 	CurrentBlocknumber *big.Int
 	CurrentDifficulty  *big.Int
 }
+
+func TestLockedRewardFromReward(t *testing.T)  {
+	r := big.NewInt(0).Mul(big.NewInt(600),big.NewInt(1e18))
+	a,b,c := LockedRewardFromReward(r)
+	fmt.Println(a,b,c)
+}
+
+func TestCalculateLockedFunds(t *testing.T) {
+
+	spec := &RewardVestingSpec
+
+	funds := common.MinedBlocks{}
+	raw := big.NewInt(360 *1e8)
+	for i:=1; i<=100000;i++ {
+
+		funds = CalculateLockedFunds(big.NewInt(int64(i)),raw,spec,funds)
+		fmt.Println("funds --len--->",len(funds),"number",i)
+
+		tim := time.Now().Unix()
+		amount := CalculateAmountUnlocked(big.NewInt(int64(i)),funds)
+		//fundsBefore := len(funds)
+		for k,v := range funds {
+			if v.BlockNumber.Cmp(big.NewInt(int64(i))) > 0 {
+				funds = funds[k:]
+				//fmt.Printf("blockNumber=%v  k=%v  fundsAfter=%v fundsBefore=%v \n",v.BlockNumber,k, len(funds),fundsBefore)
+				break
+			}
+		}
+		fmt.Println(time.Now().Unix()-tim)
+
+		fmt.Println("amount ---",amount,"funds len-->", len(funds))
+	}
+
+
+
+
+	//
+	//funds = CalculateLockedFunds(big.NewInt(3),big.NewInt(600 *1e8),spec,funds)
+	//fmt.Println(len(funds))
+	//
+	//funds = CalculateLockedFunds(big.NewInt(4),big.NewInt(600 *1e8),spec,funds)
+	//fmt.Println(len(funds))
+}
+
 
 func TestCalcNextChallenge(t *testing.T) {
 
