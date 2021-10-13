@@ -15,7 +15,6 @@ var (
 	Redeem = hex.EncodeToString([]byte("redeem"))
 	DelPid = hex.EncodeToString([]byte("delPid"))
 	UnlockReward = hex.EncodeToString([]byte("unlockReward"))
-	UnlockStaking = hex.EncodeToString([]byte("unlockStaking"))
 )
 
 var (
@@ -24,17 +23,19 @@ var (
 	ErrInsufficientRedeem1 = errors.New("insufficient funds for Redeem amount")
 	ErrInsufficientRedeem2 = errors.New("unlockBlock not now")
 	ErrNotPledged  =  errors.New("not pledged")
-	ErrInsufficientUnlockStakingValue=errors.New("insufficient funds for UnlockStaking")
 	ErrInsufficientUnlockRewardValue=errors.New("insufficient funds for UnlockReward")
 	ErrInsufficientStakingValue = errors.New("the staking amount is too small,Minimum 1000")
 	ErrInsufficientFundsForRedeem = errors.New("insufficient for redeem")
-	ErrInsufficientFundsForUnlockStaking = errors.New("insufficient funds for unlockStaking")
+	ErrInvalidPeriods = errors.New("invalid periods")
 )
 
-func CalculateNetCapacity(currentNetCapacity uint64) *big.Int {
+//CalculatePledgeAmount	file amount
+func CalculatePledgeAmount(currentNetCapacity uint64) *big.Int {
+
+	currentNetCapacity = currentNetCapacity / 1024 / 1024
 
 	switch{
-	case currentNetCapacity<100:
+	case currentNetCapacity < 100:
 		currentNetCapacity=1
 	case 100<=currentNetCapacity&&currentNetCapacity<2000:
 		currentNetCapacity=currentNetCapacity/100

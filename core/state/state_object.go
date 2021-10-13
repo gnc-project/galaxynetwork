@@ -108,9 +108,7 @@ type Account struct {
 	CodeHash []byte
 
 	Funds common.MinedBlocks //Balance of miners Fund by BlockNumber
-
 	Staking common.StakingList
-
 	CanRedeem common.CanRedeemList
 
 	Binding		common.Address
@@ -583,65 +581,28 @@ func (s *stateObject) setBinding(ref common.Address) {
 func (s *stateObject) GetRedeemAmount(number uint64)*big.Int{
 	redeemBalance:=big.NewInt(0)
 	for _,canRedeem:=range s.CanRedeem(){
-		if canRedeem.UnlockBlock<number{
-			redeemBalance=new(big.Int).Add(redeemBalance,canRedeem.RedeemAmount)
+		if canRedeem.UnlockBlock <= number{
+			redeemBalance = new(big.Int).Add(redeemBalance,canRedeem.RedeemAmount)
 		}
 	}
 	return redeemBalance
 }
 
 
-func (s *stateObject) AddStakingList(address common.Address,addStaking *common.Staking)  {
-	s.db.journal.append(stakingListChange{
-		account: &s.address,
-		prev:    s.data.Staking,
-	})
-	stakingMap:=map[common.Address]*common.Staking{}
-	for _,lastStaking:=range s.data.Staking{
-		stakingMap[*lastStaking.Address]=lastStaking
-	}
-	if stakingMap[address]==nil{
-		stakingMap[address]=addStaking
-	}else{
-		stakingMap[*addStaking.Address].StakingInfo=append(stakingMap[*addStaking.Address].StakingInfo,addStaking.StakingInfo...)
-		stakingMap[*addStaking.Address].TotalValue=new(big.Int).Add(stakingMap[*addStaking.Address].TotalValue,addStaking.TotalValue)
-		stakingMap[*addStaking.Address].TotalWeight=new(big.Int).Add(stakingMap[*addStaking.Address].TotalWeight,addStaking.TotalWeight)
-	}
+func (s *stateObject) AddStakingList(addStaking *common.Staking)  {
+	stakingList := s.AllStaking()
+	stakingList = append(stakingList, addStaking)
 
-	var addresss []string
-	for addr := range stakingMap {
-		addresss = append(addresss, addr.Hex())
-	}
-	sort.Strings(addresss)
-	
-	var stakingList common.StakingList
-
-	for _, addr := range addresss {
-		stakingList=append(stakingList, stakingMap[common.HexToAddress(addr)])
-	}
-	sort.Stable(stakingList)
-	s.setStakingList(stakingList)
+	s.SetStakingList(stakingList)
 }
 
-func (s *stateObject) SubStakingList(address common.Address,nowHeight uint64){
+func (s *stateObject) SetStakingList(stakingList common.StakingList)  {
 	s.db.journal.append(stakingListChange{
 		account: &s.address,
 		prev:    s.data.Staking,
 	})
-	for _,lastStaking:=range s.data.Staking{
-		if *lastStaking.Address==address{
-			for index,stakingInfo:=range lastStaking.StakingInfo{
-				if stakingInfo.StopBlock<nowHeight{
-					lastStaking.TotalWeight=new(big.Int).Sub(lastStaking.TotalWeight,stakingInfo.Weight)
-					lastStaking.TotalValue=new(big.Int).Sub(lastStaking.TotalValue,stakingInfo.Value)
-					lastStaking.StakingInfo[index].Value=big.NewInt(0)
-					lastStaking.StakingInfo[index].Weight=big.NewInt(0)
-				}
-			}
-		}
-	}
-	sort.Stable(s.data.Staking)
-	s.setStakingList(s.data.Staking)
+
+	s.setStakingList(stakingList)
 }
 
 func (s *stateObject) setStakingList(stakinglist common.StakingList) {
@@ -672,11 +633,15 @@ func (s *stateObject) SetCanRedeem(newCanRedeem *common.CanRedeem,index int64) {
 
 	var canRedeem  common.CanRedeemList
 
-	if index==-1{
+	if index == -1 {
 		canRedeem = append(s.data.CanRedeem, newCanRedeem)
 	}else{
 		canRedeem = append(s.data.CanRedeem[:index],s.data.CanRedeem[index+1:]...)
 	}
+
+	sort.SliceStable(canRedeem, func(first, second int)bool  {
+		return canRedeem[first].UnlockBlock < canRedeem[second].UnlockBlock
+	})
 
 	s.setCanRedeem(canRedeem)
 }
@@ -791,16 +756,6 @@ func (s *stateObject) Funds() common.MinedBlocks {
 
 func (s *stateObject) PledgeAmount() *big.Int {
 	return s.data.PledgedAmount
-}
-
-
-func (s *stateObject) StakingByAddr(addr common.Address)*common.Staking {
-	for _,staking:=range s.data.Staking{
-		if *staking.Address==addr{
-			return staking
-		}
-	}
-	return nil
 }
 
 func (s *stateObject) AllStaking()common.StakingList{

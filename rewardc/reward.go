@@ -1,6 +1,9 @@
 package rewardc
 
-import "math/big"
+import (
+	"encoding/hex"
+	"math/big"
+)
 const (
 	POCReward              = uint64(600)
 	FutureBlockTime        = uint64(18)
@@ -19,6 +22,8 @@ const (
 	BaseCapacity			= 102	//GB
 	TotalCapacity			= 100 	//PB
 	BasePB					= 1024 * 1024
+
+	StakingNum				= 50
 )
 
 var (
@@ -55,12 +60,11 @@ var (
 		30000:new(big.Int).Mul(big.NewInt(844),big.NewInt(1e+16)),
 	}
 
-	StakingBase=map[uint64]uint64{
-        0:1,
-		90:10,
-		180:20,
-		360:30,
-		1080:50,
+	StakingBase=map[uint64]*big.Int{
+		90:big.NewInt(10),
+		180:big.NewInt(20),
+		360:big.NewInt(30),
+		1080:big.NewInt(50),
 	}
 
 	
@@ -70,11 +74,31 @@ var (
 	StakingLowerLimit=new(big.Int).Mul(big.NewInt(1000),big.NewInt(1e+18))
 )
 
-// bigOne is 1 represented as a big.Int.  It is defined here to avoid
+func ParsingStakingBase(perHex string) (*big.Int, bool) {
+	perStr, err := hex.DecodeString(perHex)
+	if err != nil {
+		return nil, false
+	}
+	per,ok := new(big.Int).SetString(string(perStr),10)
+	if !ok {
+		return nil, false
+	}
+	if _, yes := StakingBase[per.Uint64()]; !yes {
+		return nil, false
+	}
+	return per, true
+}
+
+func CalculateWeight(frozenPeriod,amount *big.Int) *big.Int  {
+	weight := new(big.Int).Mul(frozenPeriod,amount)
+	return new(big.Int).Mul(weight,StakingBase[frozenPeriod.Uint64()])
+}
+
+// BigOne bigOne is 1 represented as a big.Int.  It is defined here to avoid
 // the overhead of creating it multiple times.
 var BigOne = big.NewInt(1)
 
-// mainPocLimit is the smallest proof of capacity target.
+// MainPocLimit mainPocLimit is the smallest proof of capacity target.
 var MainPocLimit = new(big.Int).Sub(new(big.Int).Lsh(BigOne, 20), BigOne)
 
 var Power  = big.NewInt(0).Exp(big.NewInt(2),big.NewInt(64),nil)

@@ -22,7 +22,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gnc-project/galaxynetwork/pocmine/transfertype"
+	"github.com/gnc-project/galaxynetwork/rewardc"
 	"math/big"
+	"strings"
 	"sync"
 	"time"
 
@@ -507,27 +509,47 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call ethereum.CallMs
 		available := new(big.Int).Set(balance)
 		if call.Value != nil {
 
-
 			switch hex.EncodeToString(call.Data) {
+			case transfertype.Pledge:
+				if b.pendingState.VerifyPid(*call.To,call.From) {
+					return 0,fmt.Errorf("%w: address %v",transfertype.ErrDuplicatePledgedPid,call.To.Hex())
+				}
+				if call.Value.Cmp(available) >= 0 {
+					return 0, errors.New("insufficient funds for transfer")
+				}
+				available.Sub(available, call.Value)
 			case transfertype.Redeem:
-				if call.Value.Cmp(b.pendingState.GetRedeemAmount(call.From,b.pendingBlock.Number().Uint64()))>0{
-					return 0, errors.New("insufficient funds for redeem")
+				if call.Value.Sign() == 0 || call.Value.Cmp(b.pendingState.GetRedeemAmount(call.From,b.pendingBlock.Number().Uint64())) != 0{
+					return 0, transfertype.ErrInsufficientFundsForRedeem
+				}
+				if available.Sign() == 0 {
+					return 0, errors.New("insufficient funds for transfer")
 				}
 			case transfertype.UnlockReward:
 				unlockValue := ethash.CalculateAmountUnlocked(b.pendingBlock.Number(),b.pendingState.GetFunds(call.From))
-				if call.Value.Cmp(unlockValue) != 0{
-					return 0,errors.New("insufficient funds for unlockReward")
+				if call.Value.Sign() == 0 || call.Value.Cmp(unlockValue) != 0{
+					return 0,transfertype.ErrInsufficientUnlockRewardValue
+				}
+				if available.Sign() == 0 {
+					return 0, errors.New("insufficient funds for transfer")
 				}
 			case transfertype.DelPid:
 				if !b.pendingState.VerifyPid(*call.To,call.From) {
-					return 0,errors.New("not pledged for delpid")
+					return 0,transfertype.ErrNotPledged
 				}
-			case transfertype.UnlockStaking:
-				unlockValue:=b.pendingState.GetUnlockStakingValue(call.From, b.pendingBlock.Number().Uint64())
-				if call.Value.Cmp(unlockValue) != 0{
-					return 0,errors.New("insufficient funds for unlockStaking")
+				if available.Sign() == 0 {
+					return 0, errors.New("insufficient funds for transfer")
 				}
 			default:
+				if len(call.Data) > 7 && strings.EqualFold(hex.EncodeToString(call.Data[:7]),transfertype.Staking) {
+					if call.Value.Cmp(rewardc.StakingLowerLimit) < 0 {
+						return 0, transfertype.ErrInsufficientStakingValue
+					}
+					perHex := hex.EncodeToString(call.Data[7:])
+					if _,ok := rewardc.ParsingStakingBase(perHex); !ok {
+						return 0,transfertype.ErrInvalidPeriods
+					}
+				}
 				if call.Value.Cmp(available) >= 0 {
 					return 0, errors.New("insufficient funds for transfer")
 				}

@@ -43,25 +43,29 @@ const (
 var (
 	hashT    = reflect.TypeOf(Hash{})
 	addressT = reflect.TypeOf(Address{})
-	AllStakingDB=HexToAddress("0x513fC36B30cD39e4F287B5633f8c5D0fa67E084C")
+	AllStakingDB = HexToAddress("0x513fC36B30cD39e4F287B5633f8c5D0fa67E084C")
 
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
 type Hash [HashLength]byte
 
-type Staking struct{
-	Address  *Address
-	TotalValue    *big.Int
-	TotalWeight   *big.Int
-
-	StakingInfo []struct{
-					Value        *big.Int
-	                Weight       *big.Int
-					StopBlock    uint64
-					StartBlock   uint64
-				}
+type Staking struct {
+	Account	  	 Address
+	StartNumber	uint64
+	FrozenPeriod *big.Int
+	Value        *big.Int
 }
+
+type StakingList []*Staking
+
+type StakingWeight struct {
+	Account Address
+	Value   *big.Int
+	Weight  *big.Int
+}
+
+type StakingWeightList []*StakingWeight
 
 type CanRedeem struct {
 	UnlockBlock  uint64
@@ -69,17 +73,6 @@ type CanRedeem struct {
 }
 
 type CanRedeemList []*CanRedeem
-
-type StakingList []*Staking
-func (S StakingList) Len() int {
-	return len(S)
-}
-func (S StakingList) Less(i, j int) bool {
-	return S[i].TotalWeight.Cmp(S[j].TotalWeight)>0
-}
-func (S StakingList) Swap(i, j int) {
-	S[i], S[j] = S[j], S[i]
-}
 
 
 type MinedBlock struct {

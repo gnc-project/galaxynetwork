@@ -17,10 +17,8 @@
 package core
 
 import (
-	"encoding/hex"
 	"github.com/gnc-project/galaxynetwork/consensus/ethash"
 	"math/big"
-	"strconv"
 
 	"github.com/gnc-project/galaxynetwork/common"
 	"github.com/gnc-project/galaxynetwork/consensus"
@@ -65,7 +63,6 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 		DelectPidTransfer:    DeletePidTransfer,
 		UnlockRewardTransfer: UnlockRewardTransfer,
 		StakingTransfer:      StakingTransfer,
-		UnlockStakingTransfer: UnlockStakingTransfer,
 		GetHash:              GetHashFn(header, chain),
 		Coinbase:             beneficiary,
 		BlockNumber:          new(big.Int).Set(header.Number),
@@ -126,7 +123,7 @@ func CanTransfer(db vm.StateDB, addr common.Address, amount *big.Int) bool {
 
 func CanRedeem(db vm.StateDB, addr common.Address, amount *big.Int,number *big.Int) bool {
 	redeemAmount:=db.GetRedeemAmount(addr,number.Uint64())
-	return redeemAmount.Cmp(amount) >= 0
+	return redeemAmount.Cmp(amount) == 0
 }
 
 // Transfer subtracts amount from sender and adds amount to recipient using the given Db
@@ -167,72 +164,31 @@ func DeletePidTransfer(db vm.StateDB, sender, recipient common.Address,number *b
 
 // RedeemTransfer 2
 func RedeemTransfer(db vm.StateDB, sender common.Address,number *big.Int){
-
 	CanRedeemList := db.GetCanRedeem(sender)
-	for index,canRedeem:=range CanRedeemList{
-
-		if canRedeem.UnlockBlock<number.Uint64(){
+	for index,canRedeem := range CanRedeemList{
+		if canRedeem.UnlockBlock < number.Uint64(){
 			db.SubCanRedeem(sender,int64(index))
 			db.AddBalance(sender,canRedeem.RedeemAmount)
 		}
-
 	}
 }
 
 // UnlockRewardTransfer Linear release
 func UnlockRewardTransfer(db vm.StateDB, sender common.Address, number *big.Int) {
-
 	funds := db.GetFunds(sender)
 	amountUnlocked := ethash.CalculateAmountUnlocked(number,funds)
 	db.AddBalance(sender, amountUnlocked)
-
 	for k,v := range funds {
 		if v.BlockNumber.Cmp(number) > 0 {
 			funds = funds[k:]
 			break
 		}
 	}
-
 	db.SetFunds(sender,funds)
 }
 
-func StakingTransfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int,data []byte,number *big.Int){
-
-
-	frozenPeriod,_:=strconv.ParseUint(hex.EncodeToString(data[7:]), 16, 64)
-
-	
-	stakingInfo:=struct{Value *big.Int; Weight *big.Int; StopBlock uint64; StartBlock uint64}{
-		Value:amount,
-		StopBlock: number.Uint64()+(frozenPeriod * rewardc.DayBlock),
-		StartBlock: number.Uint64(),
-	}
-
-	switch{
-	case frozenPeriod<90:
-		frozenPeriod=0
-	case  90<=frozenPeriod&&frozenPeriod<180:
-		frozenPeriod=90
-	case  180<=frozenPeriod&&frozenPeriod<360:
-		frozenPeriod=180
-	case  360<=frozenPeriod&&frozenPeriod<1080:
-		frozenPeriod=360
-	case  1080<=frozenPeriod:
-		frozenPeriod=1080
-	}
-	
-	stakingInfo.Weight=new(big.Int).Mul(new(big.Int).SetUint64(rewardc.StakingBase[frozenPeriod]),stakingInfo.Value)
-	staking := &common.Staking{
-		Address:&sender,
-		StakingInfo:append([]struct{Value *big.Int; Weight *big.Int; StopBlock uint64; StartBlock uint64}{},stakingInfo),
-		TotalValue:stakingInfo.Value,
-		TotalWeight:stakingInfo.Weight,
-	  }
+func StakingTransfer(db vm.StateDB, sender common.Address, amount *big.Int,frozenPeriod *big.Int,number *big.Int){
+	staking := &common.Staking{Account: sender, FrozenPeriod: frozenPeriod, Value: amount,StartNumber: number.Uint64()}
 	db.SubBalance(sender, amount)
-	db.AddStakingList(sender,staking)
-}
-
-func UnlockStakingTransfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int,number *big.Int) {
-    db.SubStakingList(sender,number.Uint64())
-	db.AddBalance(recipient, amount)
+	db.AddStakingList(common.AllStakingDB,staking)
 }

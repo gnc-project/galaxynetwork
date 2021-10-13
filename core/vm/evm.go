@@ -21,6 +21,7 @@ import (
 	"github.com/gnc-project/galaxynetwork/pocmine/transfertype"
 	"github.com/gnc-project/galaxynetwork/rewardc"
 	"math/big"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -48,7 +49,7 @@ type (
 
 	UnlockRewardTransferFunc func(StateDB, common.Address, *big.Int)
 
-	StakingTransferFunc func(StateDB, common.Address, common.Address, *big.Int, []byte,*big.Int)
+	StakingTransferFunc func(StateDB, common.Address, *big.Int, *big.Int, *big.Int)
 
 	UnlockStakingTransferFunc func(StateDB,common.Address,common.Address,*big.Int,*big.Int)
 	// GetHashFunc returns the n'th block hash in the blockchain
@@ -90,8 +91,6 @@ type BlockContext struct {
 	UnlockRewardTransfer UnlockRewardTransferFunc
 
 	StakingTransfer  StakingTransferFunc
-
-	UnlockStakingTransfer UnlockStakingTransferFunc
 
 	CanRedeem CanRedeemFunc
 
@@ -243,12 +242,14 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 			capacity=new(big.Int).Mul(big.NewInt(rewardc.BaseCapacity),big.NewInt(-1))
 		case transfertype.UnlockReward:
 			evm.Context.UnlockRewardTransfer(evm.StateDB, caller.Address(), evm.Context.BlockNumber)
-		case transfertype.Staking:
-			evm.Context.StakingTransfer(evm.StateDB, caller.Address(), addr, value,input,evm.Context.BlockNumber)
-		case transfertype.UnlockStaking:
-			evm.Context.UnlockStakingTransfer(evm.StateDB, caller.Address(), addr, value,evm.Context.BlockNumber)
 		default:
-		evm.Context.Transfer(evm.StateDB, caller.Address(), addr, value)
+			if len(snapdata) > 7 && strings.EqualFold(hex.EncodeToString(snapdata[:7]),transfertype.Staking) {
+				if per,ok := rewardc.ParsingStakingBase(hex.EncodeToString(snapdata[7:]));ok {
+					evm.Context.StakingTransfer(evm.StateDB,caller.Address(),value,per,evm.Context.BlockNumber)
+				}
+			}else {
+				evm.Context.Transfer(evm.StateDB, caller.Address(), addr, value)
+			}
 	}
 
 	// Capture the tracer start/end events in debug mode

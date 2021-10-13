@@ -615,21 +615,64 @@ func accumulateRewards(chain consensus.ChainHeaderReader, state *state.StateDB, 
 	state.SetFunds(header.Coinbase,funds)
 
 
-	stakingList:=state.GetAllStakingList()
-	var index int
-	if len(stakingList)<50{
-		index=len(stakingList)
-	}else{
-		index=50
+	//staking
+	stakingList := state.GetAllStakingList(common.AllStakingDB)
+	newStakingList := common.StakingList{}
+	stakingMap := make(map[string]*common.StakingWeight,0)
+
+	for _,v := range stakingList {
+		if v.StartNumber + ( v.FrozenPeriod.Uint64() * rewardc.DayBlock ) > header.Number.Uint64() {
+			newStakingList = append(newStakingList,v)
+			if sw,ok := stakingMap[v.Account.Hex()]; ok{
+				sw.Weight = new(big.Int).Add(sw.Weight,rewardc.CalculateWeight(v.FrozenPeriod,v.Value))
+				stakingMap[v.Account.Hex()] = sw
+			}else {
+				stakingWeight := &common.StakingWeight{Account: v.Account, Weight: rewardc.CalculateWeight(v.FrozenPeriod,v.Value)}
+				stakingMap[v.Account.Hex()] = stakingWeight
+			}
+		}else {
+			// free
+			state.AddBalance(v.Account,v.Value)
+		}
 	}
-	var allWeight=big.NewInt(0)
-	for i:=0;i<index;i++{
-		allWeight=new(big.Int).Add(allWeight,stakingList[i].TotalWeight)
+
+	state.SetStakingList(common.AllStakingDB,newStakingList)
+
+	rewardStaking := make([]*common.StakingWeight, len(stakingMap))
+	totalWeight := big.NewInt(0)
+	stakingReward := new(big.Int).Mul(new(big.Int).Div(reward,big.NewInt(100)),rewardc.StakingRewardProportion)
+	for _,v := range stakingMap {
+		rewardStaking = append(rewardStaking,v)
+		totalWeight.Add(totalWeight,v.Weight)
 	}
-	for i:=0;i<index;i++{
-		address:=stakingList[i].Address
-		stakingReward:=	new(big.Int).Mul(new(big.Int).Div(reward,big.NewInt(100)),rewardc.StakingRewardProportion)
-		state.AddBalance(*address,new(big.Int).Div(new(big.Int).Mul(stakingReward,stakingList[i].TotalWeight),allWeight))
+
+	if len(stakingMap) <= rewardc.StakingNum {
+		for _, v := range stakingMap {
+			accReward := new(big.Int).Mul(new(big.Int).Div(stakingReward,totalWeight),v.Weight)
+			state.AddBalance(v.Account,accReward)
+		}
+		return
+	}
+
+	sort.SliceStable(rewardStaking, func(first, second int) bool {
+		if rewardStaking[first].Weight.Cmp(rewardStaking[second].Weight) > 0 {
+			return true
+		}
+		if rewardStaking[first].Weight.Cmp(rewardStaking[second].Weight) == 0 &&
+			rewardStaking[first].Account.Hash().Big().Cmp(rewardStaking[second].Account.Hash().Big()) > 0 {
+			return true
+		}
+		return false
+	})
+
+	rewardStaking = rewardStaking[:rewardc.StakingNum]
+	totalWeight = big.NewInt(0)
+	for _,v := range rewardStaking {
+		totalWeight.Add(totalWeight,v.Weight)
+	}
+	for _, v := range rewardStaking {
+		accReward := new(big.Int).Mul(new(big.Int).Div(stakingReward,totalWeight),v.Weight)
+		state.AddBalance(v.Account,accReward)
 	}
 }
 

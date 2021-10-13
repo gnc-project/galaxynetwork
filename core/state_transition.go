@@ -27,8 +27,10 @@ import (
 	"github.com/gnc-project/galaxynetwork/crypto"
 	"github.com/gnc-project/galaxynetwork/params"
 	"github.com/gnc-project/galaxynetwork/pocmine/transfertype"
+	"github.com/gnc-project/galaxynetwork/rewardc"
 	"math"
 	"math/big"
+	"strings"
 )
 
 var emptyCodeHash = crypto.Keccak256Hash(nil)
@@ -193,17 +195,67 @@ func (st *StateTransition) to() common.Address {
 }
 
 func (st *StateTransition) buyGas() error {
+
+	fees := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()),st.gasPrice)
+
 	mgval := new(big.Int).SetUint64(st.msg.Gas())
 	mgval = mgval.Mul(mgval, st.gasPrice)
 	balanceCheck := mgval
 	if st.gasFeeCap != nil {
+		fees = fees.Mul(fees,st.gasFeeCap)
+
 		balanceCheck = new(big.Int).SetUint64(st.msg.Gas())
 		balanceCheck = balanceCheck.Mul(balanceCheck, st.gasFeeCap)
 		balanceCheck.Add(balanceCheck, st.value)
 	}
-	if have, want := st.state.GetBalance(st.msg.From()), balanceCheck; have.Cmp(want) < 0 {
-		return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
+
+	switch hex.EncodeToString(st.msg.Data()) {
+	case transfertype.Pledge:
+		if have, want := st.state.GetBalance(st.msg.From()), balanceCheck; have.Cmp(want) < 0 {
+			return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
+		}
+		if st.state.VerifyPid(*st.msg.To(),st.msg.From()) {
+			return fmt.Errorf("%w: address %v",transfertype.ErrNotPledged,st.msg.To().Hex())
+		}
+	case transfertype.Redeem:
+		if have, want := st.state.GetBalance(st.msg.From()), fees; have.Cmp(want) < 0 {
+			return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
+		}
+		redeemAmount := st.state.GetRedeemAmount(st.msg.From(),st.evm.Context.BlockNumber.Uint64())
+		if st.msg.Value().Sign() == 0 || redeemAmount.Cmp(st.msg.Value()) != 0 {
+			return transfertype.ErrInsufficientRedeem1
+		}
+	case transfertype.DelPid:
+		if have, want := st.state.GetBalance(st.msg.From()), fees; have.Cmp(want) < 0 {
+			return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
+		}
+		if !st.state.VerifyPid(*st.msg.To(),st.msg.From()) {
+			return transfertype.ErrNotPledged
+		}
+	case transfertype.UnlockReward:
+		if have, want := st.state.GetBalance(st.msg.From()), fees; have.Cmp(want) < 0 {
+			return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
+		}
+		unlockValue := ethash.CalculateAmountUnlocked(st.evm.Context.BlockNumber,st.state.GetFunds(st.msg.From()))
+		if st.msg.Value().Sign() == 0 || st.msg.Value().Cmp(unlockValue) != 0{
+			return transfertype.ErrInsufficientUnlockRewardValue
+		}
+	default:
+		if len(st.msg.Data()) > 7 && strings.EqualFold(hex.EncodeToString(st.msg.Data()[:7]),transfertype.Staking) {
+			if st.msg.Value().Cmp(rewardc.StakingLowerLimit) < 0{
+				return fmt.Errorf("%w: address %v",transfertype.ErrInsufficientStakingValue,st.msg.From().Hex())
+			}
+			perHex := hex.EncodeToString(st.msg.Data()[7:])
+			if _,ok := rewardc.ParsingStakingBase(perHex); !ok {
+				return fmt.Errorf("%w: address %v",transfertype.ErrInvalidPeriods,st.msg.From().Hex())
+			}
+		}
+		if have, want := st.state.GetBalance(st.msg.From()), balanceCheck; have.Cmp(want) < 0 {
+			return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
+		}
 	}
+
+
 	if err := st.gp.SubGas(st.msg.Gas()); err != nil {
 		return err
 	}
@@ -313,26 +365,47 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	}
 
 	// Check clause 6
-	switch hex.EncodeToString(snapdata[:6]) {
+	switch hex.EncodeToString(snapdata) {
+	case transfertype.Pledge:
+		if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.From(),msg.Value()) {
+			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
+		}
+		if st.state.VerifyPid(*msg.To(),msg.From()) {
+			return nil,fmt.Errorf("%w: address %v",transfertype.ErrNotPledged,st.msg.To().Hex())
+		}
 	case transfertype.Redeem:
-		if !st.evm.Context.CanRedeem(st.state, msg.From(), msg.Value(),st.evm.Context.BlockNumber) {
+		if msg.Value().Sign() == 0 || !st.evm.Context.CanRedeem(st.state, msg.From(), msg.Value(),st.evm.Context.BlockNumber) {
 			return nil, fmt.Errorf("%w: address %v", transfertype.ErrInsufficientFundsForRedeem, msg.From().Hex())
+		}
+		if st.state.GetBalance(msg.From()).Sign() == 0 {
+			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
 		}
 	case transfertype.DelPid:
 		if !st.state.VerifyPid(*msg.To(),msg.From()) {
 			return nil, fmt.Errorf("%w: address %v",transfertype.ErrNotPledged,msg.From().Hex())
 		}
+		if st.state.GetBalance(msg.From()).Sign() == 0 {
+			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
+		}
 	case transfertype.UnlockReward:
 		unlockValue := ethash.CalculateAmountUnlocked(st.evm.Context.BlockNumber,st.state.GetFunds(msg.From()))
-		if msg.Value().Cmp(unlockValue) != 0{
-			return nil,transfertype.ErrInsufficientUnlockRewardValue
+		if msg.Value().Sign() == 0 || msg.Value().Cmp(unlockValue) != 0{
+			return nil,fmt.Errorf("%w: address %v",transfertype.ErrInsufficientUnlockRewardValue,msg.From().Hex())
 		}
-	case transfertype.UnlockStaking:
-		unlockValue:=st.evm.StateDB.GetUnlockStakingValue(msg.From(),st.evm.Context.BlockNumber.Uint64())
-		if unlockValue.Cmp(msg.Value())!=0{
-			return nil, fmt.Errorf("%w: address %v", transfertype.ErrInsufficientFundsForUnlockStaking, msg.From().Hex())
+		if st.state.GetBalance(msg.From()).Sign() == 0 {
+			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
 		}
 	default:
+		if len(snapdata) > 7 && strings.EqualFold(hex.EncodeToString(snapdata[:7]),transfertype.Staking) {
+			if msg.Value().Cmp(rewardc.StakingLowerLimit) < 0{
+				return nil, fmt.Errorf("%w: address %v",transfertype.ErrInsufficientStakingValue,msg.From().Hex())
+			}
+			perHex := hex.EncodeToString(snapdata[7:])
+			if _,ok := rewardc.ParsingStakingBase(perHex); !ok {
+				return nil, fmt.Errorf("%w: address %v",transfertype.ErrInvalidPeriods,msg.From().Hex())
+			}
+		}
+
 		if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.From(),msg.Value()) {
 			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
 		}
@@ -353,7 +426,6 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
 		ret, st.gas,capacity, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
-
 	}
 
 	if !london {

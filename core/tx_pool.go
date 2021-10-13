@@ -21,9 +21,11 @@ import (
 	"errors"
 	"github.com/gnc-project/galaxynetwork/consensus/ethash"
 	"github.com/gnc-project/galaxynetwork/pocmine/transfertype"
+	"github.com/gnc-project/galaxynetwork/rewardc"
 	"math"
 	"math/big"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -36,7 +38,6 @@ import (
 	"github.com/gnc-project/galaxynetwork/log"
 	"github.com/gnc-project/galaxynetwork/metrics"
 	"github.com/gnc-project/galaxynetwork/params"
-	"github.com/gnc-project/galaxynetwork/rewardc"
 )
 
 const (
@@ -642,43 +643,45 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		if pool.currentState.VerifyPid(*tx.To(),from){
 			return transfertype.ErrDuplicatePledgedPid
 		}
-
-		currentNetCapacity := uint64(0)
-		if pool.chain.CurrentBlock().NumberU64() > 0 {
-			currentNetCapacity = pool.chain.GetBlock(pool.chain.CurrentBlock().ParentHash(),pool.chain.CurrentBlock().NumberU64()-1).NetCapacity()/1048576
-		}
-		pledgeValue := transfertype.CalculateNetCapacity(currentNetCapacity)
-		if tx.Value().Cmp(pledgeValue) != 0 || pool.currentState.GetBalance(from).Cmp(pledgeValue) < 0 {
+		pledgeValue := transfertype.CalculatePledgeAmount(pool.chain.CurrentBlock().NetCapacity())
+		if tx.Value().Cmp(pledgeValue) != 0 || pool.currentState.GetBalance(from).Cmp(pledgeValue) <= 0 {
 			return transfertype.ErrInsufficientPledge
 		}
-
 	case transfertype.Redeem:
 		redeemAmount := pool.currentState.GetRedeemAmount(from,pool.chain.CurrentBlock().NumberU64())
-		if redeemAmount.Cmp(tx.Value()) < 0 {
+		if tx.Value().Sign() == 0 || redeemAmount.Cmp(tx.Value()) != 0 {
 			return transfertype.ErrInsufficientRedeem1
+		}
+		if pool.currentState.GetBalance(from).Cmp(tx.Cost2()) < 0 {
+			return ErrInsufficientFunds
 		}
 	case transfertype.DelPid:
 		 if !pool.currentState.VerifyPid(*tx.To(),from) {
 		 	return transfertype.ErrNotPledged
 		 }
-	case transfertype.UnlockReward:
-		unlockValue := ethash.CalculateAmountUnlocked(pool.chain.CurrentBlock().Number(),pool.currentState.GetFunds(from))
-		if tx.Value().Cmp(unlockValue) != 0{
-			return transfertype.ErrInsufficientUnlockRewardValue
-		}
-	case transfertype.Staking:
-		if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0{
+		if pool.currentState.GetBalance(from).Cmp(tx.Cost2()) < 0 {
 			return ErrInsufficientFunds
 		}
-		if tx.Value().Cmp(rewardc.StakingLowerLimit)<0{
-			return transfertype.ErrInsufficientStakingValue
+	case transfertype.UnlockReward:
+		unlockValue := ethash.CalculateAmountUnlocked(pool.chain.CurrentBlock().Number(),pool.currentState.GetFunds(from))
+		if tx.Value().Sign() == 0 || tx.Value().Cmp(unlockValue) != 0{
+			return transfertype.ErrInsufficientUnlockRewardValue
 		}
-	case transfertype.UnlockStaking:
-		unlockValue:=pool.currentState.GetUnlockStakingValue(from,pool.chain.CurrentBlock().Number().Uint64())
-		if tx.Value().Cmp(unlockValue)!=0{
-			return transfertype.ErrInsufficientUnlockStakingValue
+		if pool.currentState.GetBalance(from).Cmp(tx.Cost2()) < 0 {
+			return ErrInsufficientFunds
 		}
 	default:
+
+		if len(snapdata) > 7 && strings.EqualFold(hex.EncodeToString(snapdata[:7]),transfertype.Staking) {
+			if tx.Value().Cmp(rewardc.StakingLowerLimit) < 0{
+				return transfertype.ErrInsufficientStakingValue
+			}
+			perHex := hex.EncodeToString(snapdata[7:])
+			if _,ok := rewardc.ParsingStakingBase(perHex); !ok {
+				return transfertype.ErrInvalidPeriods
+			}
+		}
+
 		if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0{
 			return ErrInsufficientFunds
 		}
@@ -1359,7 +1362,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) []*types.Trans
 		}
 		log.Trace("Removed old queued transactions", "count", len(forwards))
 		// Drop all transactions that are too costly (low balance or out of gas)
-		drops, _ := list.Filter(pool.currentState.GetBalance(addr),pool,pool.currentMaxGas)
+		drops, _ := list.Filter(pool.currentState.GetBalance(addr),addr,pool,pool.currentMaxGas)
 		for _, tx := range drops {
 			hash := tx.Hash()
 			pool.all.Remove(hash)
@@ -1556,7 +1559,7 @@ func (pool *TxPool) demoteUnexecutables() {
 			log.Trace("Removed old pending transaction", "hash", hash)
 		}
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
-		drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool,pool.currentMaxGas)
+		drops, invalids := list.Filter(pool.currentState.GetBalance(addr),addr,pool,pool.currentMaxGas)
 		for _, tx := range drops {
 			hash := tx.Hash()
 			log.Trace("Removed unpayable pending transaction", "hash", hash)

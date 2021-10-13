@@ -1066,15 +1066,6 @@ func (s *StateDB) GetFunds(addr common.Address) common.MinedBlocks {
 	return nil
 }
 
-
-func (s *StateDB) GetStakingByAddr(addr common.Address) *common.Staking {
-	stateObject := s.getStateObject(common.AllStakingDB)
-	if stateObject != nil {
-		return stateObject.StakingByAddr(addr)
-	}
-	return nil
-}
-
 func (s *StateDB) VerifyPid(pidAdr common.Address, addr common.Address) bool {
 	stateObject := s.getStateObject(pidAdr)
 	if stateObject != nil {
@@ -1207,41 +1198,22 @@ func (s *StateDB) GetRedeemAmount(addr common.Address,number uint64) *big.Int{
 	return common.Big0
 }
 
-
-func (s *StateDB) GetUnlockStakingValue(addr common.Address,nowHeight uint64) *big.Int {
-	stateObject := s.getStateObject(common.AllStakingDB)
-	if stateObject != nil {
-		unlockValue := big.NewInt(0)
-		if stateObject.StakingByAddr(addr)!=nil{
-			for _,stakingInfo:=range stateObject.StakingByAddr(addr).StakingInfo{
-				if stakingInfo.StopBlock<nowHeight{
-					unlockValue=new(big.Int).Add(unlockValue,stakingInfo.Value)
-				}
-			}
-			return unlockValue
-		}
-		return common.Big0
-	}
-	return common.Big0
-}
-
 func (s *StateDB) AddStakingList(addr common.Address,addStaking *common.Staking) {
-	stateObject := s.GetOrNewStateObject(common.AllStakingDB)
-
+	stateObject := s.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.AddStakingList(addr,addStaking)
+		stateObject.AddStakingList(addStaking)
 	}
 }
 
-func (s *StateDB) SubStakingList(addr common.Address,nowHeight uint64) {
-	stateObject := s.GetOrNewStateObject(common.AllStakingDB)
-
+func (s *StateDB) SetStakingList(addr common.Address, stakingList common.StakingList)  {
+	stateObject := s.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.SubStakingList(addr,nowHeight)
+		stateObject.SetStakingList(stakingList)
 	}
 }
-func (s *StateDB) GetAllStakingList() common.StakingList{
-	stateObject := s.getStateObject(common.AllStakingDB)
+
+func (s *StateDB) GetAllStakingList(addr common.Address) common.StakingList{
+	stateObject := s.getStateObject(addr)
 	if stateObject != nil {
 		return stateObject.AllStaking()
 	}

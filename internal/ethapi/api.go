@@ -23,7 +23,9 @@ import (
 	"fmt"
 	"github.com/gnc-project/galaxynetwork/common/pidaddress"
 	"github.com/gnc-project/galaxynetwork/pocmine/transfertype"
+	"github.com/gnc-project/galaxynetwork/rewardc"
 	"math/big"
+	"sort"
 	"strings"
 	"time"
 
@@ -680,12 +682,30 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 
 // ******************************************poc************************
 
+func (s *PublicBlockChainAPI) GetNeedPledgeAmount(ctx context.Context) (*hexutil.Big, error)  {
+	header, _ := s.b.HeaderByNumber(ctx, rpc.LatestBlockNumber) // latest header should always be available
+	pledgedAmount := transfertype.CalculatePledgeAmount(header.NetCapacity)
+
+	return (*hexutil.Big)(pledgedAmount), nil
+}
+
 func (s *PublicBlockChainAPI) GetAllPledgeAmount(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
 		return nil, err
 	}
 	return (*hexutil.Big)(state.GetTotalPledgeAmount(address)), state.Error()
+}
+
+
+func (s *PublicBlockChainAPI) GetPledgeAmount(ctx context.Context,address common.Address, pidHex string, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error)  {
+	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	if state == nil || err != nil {
+		return nil, err
+	}
+	pid := common.HexToHash(pidHex)
+
+	return (*hexutil.Big)(state.GetPledgeAmount(pidaddress.PIDAddress(address,pid[:]), address)),state.Error()
 }
 
 func (s *PublicBlockChainAPI) GetTotalCapacity(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
@@ -718,13 +738,6 @@ func (s *PublicBlockChainAPI) GetCanRedeemList(ctx context.Context, address comm
 	return state.GetCanRedeem(address), state.Error()
 }
 
-func (s *PublicBlockChainAPI) GetStakingByAddr(ctx context.Context, address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (*common.Staking, error) {
-	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
-	if state == nil || err != nil {
-		return nil, err
-	}
-	return state.GetStakingByAddr(address), state.Error()
-}
 func (s *PublicBlockChainAPI) GetRedeemAmount(ctx context.Context, address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
@@ -733,24 +746,68 @@ func (s *PublicBlockChainAPI) GetRedeemAmount(ctx context.Context, address commo
 	return (*hexutil.Big)(state.GetRedeemAmount(address,s.b.CurrentBlock().NumberU64())), state.Error()
 }
 
-func (s *PublicBlockChainAPI) GetAllStakingList(ctx context.Context,blockNrOrHash rpc.BlockNumberOrHash) (common.StakingList, error) {
+func (s *PublicBlockChainAPI) GetStakingWeightByAddr(ctx context.Context, address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (*common.StakingWeight, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
 		return nil, err
 	}
-	list := state.GetAllStakingList()[:50]
-	if list.Len() <= 50 {
-		return list,state.Error()
+
+	stakingList := state.GetAllStakingList(common.AllStakingDB)
+
+	stakingWeight := &common.StakingWeight{Account: address,Value: big.NewInt(0),Weight: big.NewInt(0)}
+
+	for _,v := range stakingList {
+		if v.Account == address {
+			stakingWeight.Value.Add(stakingWeight.Value,v.Value)
+			stakingWeight.Weight.Add(stakingWeight.Weight,rewardc.CalculateWeight(v.FrozenPeriod,v.Value))
+		}
 	}
-	return list[:50], state.Error()
+
+	return stakingWeight, state.Error()
 }
 
-func (s *PublicBlockChainAPI) GetUnlockStakingValue(ctx context.Context,address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
+func (s *PublicBlockChainAPI) GetRewardStakingList(ctx context.Context,blockNrOrHash rpc.BlockNumberOrHash) (common.StakingWeightList, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
 		return nil, err
 	}
-	return (*hexutil.Big)(state.GetUnlockStakingValue(address,s.b.CurrentBlock().NumberU64())), state.Error()
+
+	stakingList := state.GetAllStakingList(common.AllStakingDB)
+
+	stakingMap := make(map[string]*common.StakingWeight,0)
+	for _, v := range stakingList {
+		if sw,ok := stakingMap[v.Account.Hex()]; ok{
+			sw.Weight = new(big.Int).Add(sw.Weight,rewardc.CalculateWeight(v.FrozenPeriod,v.Value))
+			sw.Value = new(big.Int).Add(sw.Value,v.Value)
+			stakingMap[v.Account.Hex()] = sw
+		}else {
+			stakingWeight := &common.StakingWeight{Account: v.Account, Weight: rewardc.CalculateWeight(v.FrozenPeriod,v.Value), Value: v.Value}
+			stakingMap[v.Account.Hex()] = stakingWeight
+		}
+	}
+
+	rewardStaking := common.StakingWeightList{}
+
+	for _,v := range stakingMap {
+		rewardStaking = append(rewardStaking,v)
+	}
+
+	if len(rewardStaking) <= rewardc.StakingNum {
+		return rewardStaking, state.Error()
+	}
+
+	sort.SliceStable(rewardStaking, func(first, second int) bool {
+		if rewardStaking[first].Weight.Cmp(rewardStaking[second].Weight) > 0 {
+			return true
+		}
+		if rewardStaking[first].Weight.Cmp(rewardStaking[second].Weight) == 0 &&
+			rewardStaking[first].Account.Hash().Big().Cmp(rewardStaking[second].Account.Hash().Big()) > 0 {
+			return true
+		}
+		return false
+	})
+
+	return rewardStaking[:rewardc.StakingNum], state.Error()
 }
 
 func (s *PublicBlockChainAPI) GetAmountUnlocked(ctx context.Context,address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
@@ -761,6 +818,7 @@ func (s *PublicBlockChainAPI) GetAmountUnlocked(ctx context.Context,address comm
 	number := new(big.Int).SetUint64(uint64(s.BlockNumber()))
 	return (*hexutil.Big)(ethash.CalculateAmountUnlocked(number,state.GetFunds(address))), state.Error()
 }
+
 
 func (s *PublicBlockChainAPI) VerifyPid(ctx context.Context, address common.Address, pidHex string, blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
@@ -1172,26 +1230,48 @@ func DoEstimateGas(ctx context.Context, b Backend, args TransactionArgs, blockNr
 		if args.Value != nil {
 
 			switch hex.EncodeToString(args.data()) {
-
+			case transfertype.Pledge:
+				if state.VerifyPid(*args.To,*args.From) {
+					return 0,fmt.Errorf("%w: address %v",transfertype.ErrDuplicatePledgedPid,*args.To)
+				}
+				if args.Value.ToInt().Cmp(available) >= 0 {
+					return 0, errors.New("insufficient funds for transfer")
+				}
+				available.Sub(available, args.Value.ToInt())
 			case transfertype.Redeem:
-				if args.Value.ToInt().Cmp(state.GetRedeemAmount(*args.From,b.CurrentHeader().Number.Uint64()))>0{
+				if args.Value.ToInt().Sign() == 0 || args.Value.ToInt().Cmp(state.GetRedeemAmount(*args.From,b.CurrentHeader().Number.Uint64())) != 0{
 					return 0, errors.New("insufficient funds for redeem")
+				}
+				if available.Sign() == 0 {
+					return 0, errors.New("insufficient funds for transfer")
 				}
 			case transfertype.UnlockReward:
 				unlockValue := ethash.CalculateAmountUnlocked(b.CurrentBlock().Number(),state.GetFunds(args.from()))
-				if args.Value.ToInt().Cmp(unlockValue) != 0{
+				if args.Value.ToInt().Sign() == 0 || args.Value.ToInt().Cmp(unlockValue) != 0{
 					return 0,errors.New("insufficient funds for unlockReward")
+				}
+				if available.Sign() == 0 {
+					return 0, errors.New("insufficient funds for transfer")
 				}
 			case transfertype.DelPid:
 				if !state.VerifyPid(*args.To,args.from()) {
 					return 0,errors.New("not pledged for delpid")
 				}
-			case transfertype.UnlockStaking:
-				unlockValue:=state.GetUnlockStakingValue(args.from(),b.CurrentBlock().Number().Uint64())
-				if args.Value.ToInt().Cmp(unlockValue) != 0{
-					return 0,errors.New("insufficient funds for unlockStaking")
+				if available.Sign() == 0 {
+					return 0, errors.New("insufficient funds for transfer")
 				}
 			default:
+
+				if len(args.data()) > 7 && strings.EqualFold(hex.EncodeToString(args.data()[:7]),transfertype.Staking) {
+					if args.Value.ToInt().Cmp(rewardc.StakingLowerLimit) < 0{
+						return 0, transfertype.ErrInsufficientStakingValue
+					}
+					perHex := hex.EncodeToString(args.data()[7:])
+					if _,ok := rewardc.ParsingStakingBase(perHex); !ok {
+						return 0, transfertype.ErrInvalidPeriods
+					}
+				}
+
 				if args.Value.ToInt().Cmp(available) >= 0 {
 					return 0, errors.New("insufficient funds for transfer")
 				}

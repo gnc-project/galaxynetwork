@@ -20,11 +20,14 @@ import (
 	"container/heap"
 	"encoding/hex"
 	"github.com/gnc-project/galaxynetwork/common"
+	"github.com/gnc-project/galaxynetwork/consensus/ethash"
 	"github.com/gnc-project/galaxynetwork/core/types"
 	"github.com/gnc-project/galaxynetwork/pocmine/transfertype"
+	"github.com/gnc-project/galaxynetwork/rewardc"
 	"math"
 	"math/big"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -328,7 +331,7 @@ func (l *txList) Forward(threshold uint64) types.Transactions {
 // a point in calculating all the costs or if the balance covers all. If the threshold
 // is lower than the costgas cap, the caps will be reset to a new high after removing
 // the newly invalidated transactions.
-func (l *txList) Filter(costLimit *big.Int,pool *TxPool,gasLimit uint64) (types.Transactions, types.Transactions) {
+func (l *txList) Filter(costLimit *big.Int,from common.Address,pool *TxPool,gasLimit uint64) (types.Transactions, types.Transactions) {
 	// If all transactions are below the threshold, short circuit
 	if l.costcap.Cmp(costLimit) <= 0 && l.gascap <= gasLimit {
 		return nil, nil
@@ -339,15 +342,38 @@ func (l *txList) Filter(costLimit *big.Int,pool *TxPool,gasLimit uint64) (types.
 	// Filter out all the transactions above the account's funds
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
 		switch hex.EncodeToString(tx.Data()) {
+		case transfertype.Pledge:
+			if pool.currentState.VerifyPid(*tx.To(),from) {
+				return true
+			}
+			return tx.Gas() > gasLimit || tx.Cost().Cmp(costLimit) > 0
 		case transfertype.Redeem:
+			redeemAmount := pool.currentState.GetRedeemAmount(from,pool.chain.CurrentBlock().NumberU64())
+			if tx.Value().Sign() == 0 || tx.Value().Cmp(redeemAmount) != 0 {
+				return true
+			}
 			return tx.Gas() > gasLimit || tx.Cost2().Cmp(costLimit) > 0
 		case transfertype.DelPid:
+			if !pool.currentState.VerifyPid(*tx.To(),from) {
+				return true
+			}
 			return tx.Gas() > gasLimit || tx.Cost2().Cmp(costLimit) > 0
 		case transfertype.UnlockReward:
-			return tx.Gas() > gasLimit || tx.Cost2().Cmp(costLimit) > 0
-		case transfertype.UnlockStaking:
+			unlockValue := ethash.CalculateAmountUnlocked(pool.chain.CurrentBlock().Number(),pool.currentState.GetFunds(from))
+			if tx.Value().Sign() == 0 || tx.Value().Cmp(unlockValue) != 0 {
+				return true
+			}
 			return tx.Gas() > gasLimit || tx.Cost2().Cmp(costLimit) > 0
 		default:
+			if len(tx.Data()) > 7 && strings.EqualFold(hex.EncodeToString(tx.Data()[:7]),transfertype.Staking) {
+				if tx.Value().Cmp(rewardc.StakingLowerLimit) < 0{
+					return true
+				}
+				perHex := hex.EncodeToString(tx.Data()[7:])
+				if _,ok := rewardc.ParsingStakingBase(perHex); !ok {
+					return true
+				}
+			}
 			return tx.Gas() > gasLimit || tx.Cost().Cmp(costLimit) > 0
 		}
 	})

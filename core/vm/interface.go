@@ -99,12 +99,10 @@ type StateDB interface {
 	SubCanRedeem(common.Address, int64)
 	GetCanRedeem(common.Address) common.CanRedeemList
 	GetRedeemAmount(common.Address,uint64) *big.Int
-	
-	GetUnlockStakingValue(common.Address, uint64) *big.Int
 
-	AddStakingList(common.Address, *common.Staking)
-	SubStakingList(common.Address, uint64)
-	GetAllStakingList() common.StakingList
+	AddStakingList(common.Address,*common.Staking)
+	SetStakingList(common.Address, common.StakingList)
+	GetAllStakingList(common.Address) common.StakingList
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM
