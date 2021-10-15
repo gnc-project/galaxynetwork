@@ -164,13 +164,20 @@ func DeletePidTransfer(db vm.StateDB, sender, recipient common.Address,number *b
 
 // RedeemTransfer 2
 func RedeemTransfer(db vm.StateDB, sender common.Address,number *big.Int){
+
 	CanRedeemList := db.GetCanRedeem(sender)
-	for index,canRedeem := range CanRedeemList{
-		if canRedeem.UnlockBlock < number.Uint64(){
-			db.SubCanRedeem(sender,int64(index))
-			db.AddBalance(sender,canRedeem.RedeemAmount)
+
+	amount := big.NewInt(0)
+	newRedeemList := common.CanRedeemList{}
+	for _,canRedeem := range CanRedeemList{
+		if canRedeem.UnlockBlock <= number.Uint64() {
+			amount.Add(amount,canRedeem.RedeemAmount)
+		}else {
+			newRedeemList = append(newRedeemList, canRedeem)
 		}
 	}
+	db.SubCanRedeem(sender,newRedeemList)
+	db.AddBalance(sender,amount)
 }
 
 // UnlockRewardTransfer Linear release

@@ -96,7 +96,7 @@ type StateDB interface {
 	GetFunds(addr common.Address) common.MinedBlocks
 
 	AddCanRedeem(common.Address,  uint64, *big.Int)
-	SubCanRedeem(common.Address, int64)
+	SubCanRedeem(common.Address, common.CanRedeemList)
 	GetCanRedeem(common.Address) common.CanRedeemList
 	GetRedeemAmount(common.Address,uint64) *big.Int
 

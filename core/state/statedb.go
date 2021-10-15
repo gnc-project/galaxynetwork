@@ -1172,10 +1172,10 @@ func (s *StateDB) AddCanRedeem(addr common.Address, number uint64,amount *big.In
 }
 
 
-func (s *StateDB) SubCanRedeem(addr common.Address,index int64) {
+func (s *StateDB) SubCanRedeem(addr common.Address,canRedeemList common.CanRedeemList) {
 	stateObject := s.GetOrNewStateObject(addr)
 	if stateObject != nil {
-		stateObject.SubCanRedeem(index)
+		stateObject.SubCanRedeem(canRedeemList)
 	}
 }
 

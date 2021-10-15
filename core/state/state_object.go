@@ -610,40 +610,32 @@ func (s *stateObject) setStakingList(stakinglist common.StakingList) {
 }
 
 func (s *stateObject) AddCanRedeem(number uint64,amount *big.Int) {
-
 	var newCanRedeem=&common.CanRedeem{
 		UnlockBlock: number,
 		RedeemAmount: amount,
 	}
-
-	s.SetCanRedeem(newCanRedeem,-1)
+	var canRedeemList  common.CanRedeemList
+	canRedeemList = append(s.data.CanRedeem, newCanRedeem)
+	s.SetCanRedeem(canRedeemList)
 }
 
-// SubBalance removes amount from s's balance.
+// SubCanRedeem SubBalance removes amount from s's balance.
 // It is used to remove funds from the origin account of a transfer.
-func (s *stateObject) SubCanRedeem(index int64) {
-	s.SetCanRedeem(nil,index)
+func (s *stateObject) SubCanRedeem(canRedeemList common.CanRedeemList) {
+	s.SetCanRedeem(canRedeemList)
 }
 
-func (s *stateObject) SetCanRedeem(newCanRedeem *common.CanRedeem,index int64) {
+func (s *stateObject) SetCanRedeem(newCanRedeemList common.CanRedeemList) {
 	s.db.journal.append(canReDeemChange{
 		account: &s.address,
 		prev:    s.data.CanRedeem,
 	})
 
-	var canRedeem  common.CanRedeemList
-
-	if index == -1 {
-		canRedeem = append(s.data.CanRedeem, newCanRedeem)
-	}else{
-		canRedeem = append(s.data.CanRedeem[:index],s.data.CanRedeem[index+1:]...)
-	}
-
-	sort.SliceStable(canRedeem, func(first, second int)bool  {
-		return canRedeem[first].UnlockBlock < canRedeem[second].UnlockBlock
+	sort.SliceStable(newCanRedeemList, func(first, second int)bool  {
+		return newCanRedeemList[first].UnlockBlock < newCanRedeemList[second].UnlockBlock
 	})
 
-	s.setCanRedeem(canRedeem)
+	s.setCanRedeem(newCanRedeemList)
 }
 
 func (s *stateObject) setCanRedeem(CanRedeem common.CanRedeemList) {
