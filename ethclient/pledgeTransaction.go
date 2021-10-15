@@ -1,6 +1,8 @@
 package ethclient
 
 import (
+	"context"
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	ethereum "github.com/gnc-project/galaxynetwork"
@@ -9,11 +11,6 @@ import (
 	"github.com/gnc-project/galaxynetwork/core/types"
 	"github.com/gnc-project/galaxynetwork/crypto"
 	"github.com/gnc-project/galaxynetwork/pocmine/transfertype"
-	"strings"
-	"time"
-
-	"context"
-	"crypto/ecdsa"
 )
 
 func PledgeTransaction(client *Client,privateKeyString string,pidHex string)(common.Hash,error){
@@ -57,31 +54,23 @@ func PledgeTransaction(client *Client,privateKeyString string,pidHex string)(com
 		return common.Hash{},err
 	}
 
-	for  {
-		nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
-		if err != nil {
-			return common.Hash{},err
-		}
-		fmt.Printf("address=%s nonce=%d\n",fromAddress.Hex(),nonce)
-		tx := types.NewTransaction(nonce, *msg.To,msg.Value,gas,gasPrice, msg.Data)
+	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
+	if err != nil {
+		return common.Hash{},err
+	}
+	fmt.Printf("address=%s nonce=%d\n",fromAddress.Hex(),nonce)
+	tx := types.NewTransaction(nonce, *msg.To,msg.Value,gas,gasPrice, msg.Data)
 
-		//Sign transaction
-		signedTx, err:= types.SignTx(tx, types.NewEIP155Signer(chainID), fromPrivateKey)
-		if err != nil {
-			return common.Hash{},err
-		}
-
-		//send signatureTx
-		if err = client.SendTransaction(context.Background(), signedTx);err != nil {
-			if strings.Contains(err.Error(),"nonce") {
-				time.Sleep(2 *time.Second)
-				continue
-			}else {
-				return common.Hash{},err
-			}
-		}
-
-		return signedTx.Hash(),nil
+	//Sign transaction
+	signedTx, err:= types.SignTx(tx, types.NewEIP155Signer(chainID), fromPrivateKey)
+	if err != nil {
+		return common.Hash{},err
 	}
 
+	//send signatureTx
+	if err = client.SendTransaction(context.Background(), signedTx);err != nil {
+		return common.Hash{},err
+	}
+
+	return signedTx.Hash(),nil
 }
