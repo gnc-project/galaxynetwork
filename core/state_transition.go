@@ -196,13 +196,14 @@ func (st *StateTransition) to() common.Address {
 
 func (st *StateTransition) buyGas() error {
 
-	fees := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()),st.gasPrice)
+	feesOnly := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()),st.gasPrice)
 
 	mgval := new(big.Int).SetUint64(st.msg.Gas())
 	mgval = mgval.Mul(mgval, st.gasPrice)
 	balanceCheck := mgval
 	if st.gasFeeCap != nil {
-		fees = fees.Mul(fees,st.gasFeeCap)
+
+		feesOnly = new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()),st.gasFeeCap)
 
 		balanceCheck = new(big.Int).SetUint64(st.msg.Gas())
 		balanceCheck = balanceCheck.Mul(balanceCheck, st.gasFeeCap)
@@ -218,7 +219,7 @@ func (st *StateTransition) buyGas() error {
 			return fmt.Errorf("%w: address %v",transfertype.ErrNotPledged,st.msg.To().Hex())
 		}
 	case transfertype.Redeem:
-		if have, want := st.state.GetBalance(st.msg.From()), fees; have.Cmp(want) < 0 {
+		if have, want := st.state.GetBalance(st.msg.From()), feesOnly; have.Cmp(want) < 0 {
 			return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
 		}
 		redeemAmount := st.state.GetRedeemAmount(st.msg.From(),st.evm.Context.BlockNumber.Uint64())
@@ -226,14 +227,14 @@ func (st *StateTransition) buyGas() error {
 			return transfertype.ErrInsufficientRedeem1
 		}
 	case transfertype.DelPid:
-		if have, want := st.state.GetBalance(st.msg.From()), fees; have.Cmp(want) < 0 {
+		if have, want := st.state.GetBalance(st.msg.From()), feesOnly; have.Cmp(want) < 0 {
 			return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
 		}
 		if !st.state.VerifyPid(*st.msg.To(),st.msg.From()) {
 			return transfertype.ErrNotPledged
 		}
 	case transfertype.UnlockReward:
-		if have, want := st.state.GetBalance(st.msg.From()), fees; have.Cmp(want) < 0 {
+		if have, want := st.state.GetBalance(st.msg.From()), feesOnly; have.Cmp(want) < 0 {
 			return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
 		}
 		unlockValue := ethash.CalculateAmountUnlocked(st.evm.Context.BlockNumber,st.state.GetFunds(st.msg.From()))
