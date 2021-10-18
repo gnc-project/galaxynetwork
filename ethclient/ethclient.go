@@ -417,6 +417,12 @@ func (ec *Client) GetAmountUnlocked(ctx context.Context, account common.Address,
 	return (*big.Int)(&result), err
 }
 
+func (ec *Client) GetTotalLockedAmount(ctx context.Context, account common.Address,blockNumber *big.Int) (*big.Int, error) {
+	var result hexutil.Big
+	err := ec.c.CallContext(ctx, &result, "eth_totalLockedAmount", account,toBlockNumArg(blockNumber))
+	return (*big.Int)(&result), err
+}
+
 // StorageAt returns the value of key in the contract storage of the given account.
 // The block number can be nil, in which case the value is taken from the latest known block.
 func (ec *Client) StorageAt(ctx context.Context, account common.Address, key common.Hash, blockNumber *big.Int) ([]byte, error) {
