@@ -808,6 +808,15 @@ func (s *PublicBlockChainAPI) GetAmountUnlocked(ctx context.Context,address comm
 	return (*hexutil.Big)(ethash.CalculateAmountUnlocked(number,state.GetFunds(address))), state.Error()
 }
 
+func (s *PublicBlockChainAPI) GetTotalLockedAmount(ctx context.Context,address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
+	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	if state == nil || err != nil {
+		return nil, err
+	}
+	number := new(big.Int).SetUint64(uint64(s.BlockNumber()))
+	return (*hexutil.Big)(ethash.CalculateAmountUnlocked(new(big.Int).Add(number,big.NewInt(10000)),state.GetFunds(address))), state.Error()
+}
+
 
 func (s *PublicBlockChainAPI) VerifyPid(ctx context.Context, address common.Address, pidHex string, blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
