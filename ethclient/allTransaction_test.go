@@ -184,4 +184,13 @@ func TestClient_GetAmountUnlocked(t *testing.T) {
 	fmt.Println(amountUnlocked)
 }
 
+func TestClient_GetTotalLockedAmount(t *testing.T)  {
+	client := LinkGNC("http://127.0.0.1:8545")
+	amountUnlocked,err := client.GetTotalLockedAmount(context.Background(),common.HexToAddress(from),nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(amountUnlocked)
+}
+
 
