@@ -419,7 +419,7 @@ func (ec *Client) GetAmountUnlocked(ctx context.Context, account common.Address,
 
 func (ec *Client) GetTotalLockedAmount(ctx context.Context, account common.Address,blockNumber *big.Int) (*big.Int, error) {
 	var result hexutil.Big
-	err := ec.c.CallContext(ctx, &result, "eth_totalLockedAmount", account,toBlockNumArg(blockNumber))
+	err := ec.c.CallContext(ctx, &result, "eth_getTotalLockedAmount", account,toBlockNumArg(blockNumber))
 	return (*big.Int)(&result), err
 }
 
