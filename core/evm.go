@@ -121,9 +121,9 @@ func CanTransfer(db vm.StateDB, addr common.Address, amount *big.Int) bool {
 	return db.GetBalance(addr).Cmp(amount) >= 0
 }
 
-func CanRedeem(db vm.StateDB, addr common.Address, amount *big.Int,number *big.Int) bool {
+func CanRedeem(db vm.StateDB, addr common.Address,number *big.Int) bool {
 	redeemAmount:=db.GetRedeemAmount(addr,number.Uint64())
-	return redeemAmount.Cmp(amount) == 0
+	return redeemAmount.Cmp(big.NewInt(0)) > 0
 }
 
 // Transfer subtracts amount from sender and adds amount to recipient using the given Db

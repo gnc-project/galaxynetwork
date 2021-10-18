@@ -519,15 +519,15 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call ethereum.CallMs
 				}
 				available.Sub(available, call.Value)
 			case transfertype.Redeem:
-				if call.Value.Sign() == 0 || call.Value.Cmp(b.pendingState.GetRedeemAmount(call.From,b.pendingBlock.Number().Uint64())) != 0{
+				if call.Value.Sign() != 0 || b.pendingState.GetRedeemAmount(call.From,b.blockchain.CurrentBlock().Number().Uint64()).Cmp(big.NewInt(0)) <= 0{
 					return 0, transfertype.ErrInsufficientFundsForRedeem
 				}
 				if available.Sign() == 0 {
 					return 0, errors.New("insufficient funds for transfer")
 				}
 			case transfertype.UnlockReward:
-				unlockValue := ethash.CalculateAmountUnlocked(b.pendingBlock.Number(),b.pendingState.GetFunds(call.From))
-				if call.Value.Sign() == 0 || call.Value.Cmp(unlockValue) != 0{
+				unlockValue := ethash.CalculateAmountUnlocked(b.blockchain.CurrentBlock().Number(),b.pendingState.GetFunds(call.From))
+				if call.Value.Sign() != 0 || unlockValue.Cmp(big.NewInt(0)) <= 0{
 					return 0,transfertype.ErrInsufficientUnlockRewardValue
 				}
 				if available.Sign() == 0 {
@@ -536,6 +536,9 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call ethereum.CallMs
 			case transfertype.DelPid:
 				if !b.pendingState.VerifyPid(*call.To,call.From) {
 					return 0,transfertype.ErrNotPledged
+				}
+				if call.Value.Sign() != 0 {
+					return 0,transfertype.ErrInvalidDelPid
 				}
 				if available.Sign() == 0 {
 					return 0, errors.New("insufficient funds for transfer")

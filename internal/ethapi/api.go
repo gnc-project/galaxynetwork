@@ -719,17 +719,6 @@ func (s *PublicBlockChainAPI) GetTotalCapacity(ctx context.Context, address comm
 	return (*hexutil.Big)(state.GetTotalCapacity(address)), state.Error()
 }
 
-// GetTotalLockedFunds returns the amount of wei for the given address in the state of the
-// given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
-func (s *PublicBlockChainAPI) GetTotalLockedFunds(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
-	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
-	if state == nil || err != nil {
-		return nil, err
-	}
-	number := new(big.Int).SetUint64(uint64(s.BlockNumber()+10000))
-	return (*hexutil.Big)(ethash.CalculateAmountUnlocked(number,state.GetFunds(address))), state.Error()
-}
-
 func (s *PublicBlockChainAPI) GetCanRedeemList(ctx context.Context, address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (common.CanRedeemList, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
@@ -1239,7 +1228,7 @@ func DoEstimateGas(ctx context.Context, b Backend, args TransactionArgs, blockNr
 				}
 				available.Sub(available, args.Value.ToInt())
 			case transfertype.Redeem:
-				if args.Value.ToInt().Sign() == 0 || args.Value.ToInt().Cmp(state.GetRedeemAmount(*args.From,b.CurrentHeader().Number.Uint64())) != 0{
+				if args.Value.ToInt().Sign() != 0 || state.GetRedeemAmount(*args.From,b.CurrentHeader().Number.Uint64()).Cmp(big.NewInt(0)) <= 0{
 					return 0, errors.New("insufficient funds for redeem")
 				}
 				if available.Sign() == 0 {
@@ -1247,7 +1236,7 @@ func DoEstimateGas(ctx context.Context, b Backend, args TransactionArgs, blockNr
 				}
 			case transfertype.UnlockReward:
 				unlockValue := ethash.CalculateAmountUnlocked(b.CurrentBlock().Number(),state.GetFunds(args.from()))
-				if args.Value.ToInt().Sign() == 0 || args.Value.ToInt().Cmp(unlockValue) != 0{
+				if args.Value.ToInt().Sign() != 0 || unlockValue.Cmp(big.NewInt(0)) <= 0{
 					return 0,errors.New("insufficient funds for unlockReward")
 				}
 				if available.Sign() == 0 {
@@ -1256,6 +1245,9 @@ func DoEstimateGas(ctx context.Context, b Backend, args TransactionArgs, blockNr
 			case transfertype.DelPid:
 				if !state.VerifyPid(*args.To,args.from()) {
 					return 0,errors.New("not pledged for delpid")
+				}
+				if args.Value.ToInt().Sign() != 0 {
+					return 0,errors.New("invalid del pid")
 				}
 				if available.Sign() == 0 {
 					return 0, errors.New("insufficient funds for transfer")

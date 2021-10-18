@@ -3,6 +3,7 @@ package ethclient
 import (
 	"errors"
 	"github.com/gnc-project/galaxynetwork/pocmine/transfertype"
+	"math/big"
 
 	"context"
 	"crypto/ecdsa"
@@ -29,17 +30,11 @@ func RedeemTransaction(client *Client,privateKeyString string)(common.Hash,error
 	if err != nil {
 		return common.Hash{},err
 	}
-
-	redeemBalance,err:=client.GetRedeemAmount(context.Background(),fromAddress,nil)
-	if err != nil {
-		return common.Hash{},err
-	}
-
 	msg:=ethereum.CallMsg{
 			From:fromAddress,
 			To:&fromAddress,
 			Gas: uint64(0),
-			Value: redeemBalance,
+			Value: big.NewInt(0),
 			Data: common.Hex2Bytes(transfertype.Redeem),
 		}
 	gas,err:=client.EstimateGas(context.Background(),msg)

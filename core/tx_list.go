@@ -349,7 +349,7 @@ func (l *txList) Filter(costLimit *big.Int,from common.Address,pool *TxPool,gasL
 			return tx.Gas() > gasLimit || tx.Cost().Cmp(costLimit) > 0
 		case transfertype.Redeem:
 			redeemAmount := pool.currentState.GetRedeemAmount(from,pool.chain.CurrentBlock().NumberU64())
-			if tx.Value().Sign() == 0 || tx.Value().Cmp(redeemAmount) != 0 {
+			if tx.Value().Sign() != 0 || redeemAmount.Cmp(big.NewInt(0)) <= 0 {
 				return true
 			}
 			return tx.Gas() > gasLimit || tx.Cost2().Cmp(costLimit) > 0
@@ -357,10 +357,13 @@ func (l *txList) Filter(costLimit *big.Int,from common.Address,pool *TxPool,gasL
 			if !pool.currentState.VerifyPid(*tx.To(),from) {
 				return true
 			}
+			if tx.Value().Sign() != 0 {
+				return true
+			}
 			return tx.Gas() > gasLimit || tx.Cost2().Cmp(costLimit) > 0
 		case transfertype.UnlockReward:
 			unlockValue := ethash.CalculateAmountUnlocked(pool.chain.CurrentBlock().Number(),pool.currentState.GetFunds(from))
-			if tx.Value().Sign() == 0 || tx.Value().Cmp(unlockValue) != 0 {
+			if tx.Value().Sign() != 0 || unlockValue.Cmp(big.NewInt(0)) <= 0 {
 				return true
 			}
 			return tx.Gas() > gasLimit || tx.Cost2().Cmp(costLimit) > 0

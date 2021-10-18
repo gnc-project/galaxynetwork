@@ -41,7 +41,7 @@ type (
 	// TransferFunc is the signature of a transfer function
 	TransferFunc func(StateDB, common.Address, common.Address, *big.Int)
 
-	CanRedeemFunc func(StateDB, common.Address,*big.Int,*big.Int) bool 
+	CanRedeemFunc func(StateDB, common.Address,*big.Int) bool
 
 	PledgeFunc   func(StateDB, common.Address, common.Address, *big.Int)
 	RedeemFunc   func(StateDB, common.Address,*big.Int)

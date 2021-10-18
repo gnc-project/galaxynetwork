@@ -9,6 +9,7 @@ import (
 	"github.com/gnc-project/galaxynetwork/core/types"
 	"github.com/gnc-project/galaxynetwork/crypto"
 	"github.com/gnc-project/galaxynetwork/pocmine/transfertype"
+	"math/big"
 )
 
 func UnlockReward(client *Client,privateKeyString string)(common.Hash,error){
@@ -27,15 +28,11 @@ func UnlockReward(client *Client,privateKeyString string)(common.Hash,error){
 		return common.Hash{},err
 	}
 
-	value,err:=client.GetAmountUnlocked(context.Background(),fromAddress,nil)
-	if err != nil {
-		return common.Hash{},err
-	}
 	msg:=ethereum.CallMsg{
 			From:fromAddress,
 			To:&fromAddress,
 			Gas: uint64(0),
-			Value:value,
+			Value: big.NewInt(0),
 			Data: common.Hex2Bytes(transfertype.UnlockReward),
 		}
 	gasPrice,_:=client.SuggestGasPrice(context.Background())

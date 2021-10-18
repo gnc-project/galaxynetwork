@@ -223,12 +223,15 @@ func (st *StateTransition) buyGas() error {
 			return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
 		}
 		redeemAmount := st.state.GetRedeemAmount(st.msg.From(),st.evm.Context.BlockNumber.Uint64())
-		if st.msg.Value().Sign() == 0 || redeemAmount.Cmp(st.msg.Value()) != 0 {
+		if st.msg.Value().Sign() != 0 || redeemAmount.Cmp(big.NewInt(0)) <= 0 {
 			return transfertype.ErrInsufficientRedeem1
 		}
 	case transfertype.DelPid:
 		if have, want := st.state.GetBalance(st.msg.From()), feesOnly; have.Cmp(want) < 0 {
 			return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
+		}
+		if st.msg.Value().Sign() != 0 {
+			return transfertype.ErrInvalidDelPid
 		}
 		if !st.state.VerifyPid(*st.msg.To(),st.msg.From()) {
 			return transfertype.ErrNotPledged
@@ -238,7 +241,7 @@ func (st *StateTransition) buyGas() error {
 			return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
 		}
 		unlockValue := ethash.CalculateAmountUnlocked(st.evm.Context.BlockNumber,st.state.GetFunds(st.msg.From()))
-		if st.msg.Value().Sign() == 0 || st.msg.Value().Cmp(unlockValue) != 0{
+		if st.msg.Value().Sign() != 0 || unlockValue.Cmp(big.NewInt(0)) <= 0{
 			return transfertype.ErrInsufficientUnlockRewardValue
 		}
 	default:
@@ -375,7 +378,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			return nil,fmt.Errorf("%w: address %v",transfertype.ErrNotPledged,st.msg.To().Hex())
 		}
 	case transfertype.Redeem:
-		if msg.Value().Sign() == 0 || !st.evm.Context.CanRedeem(st.state, msg.From(), msg.Value(),st.evm.Context.BlockNumber) {
+		if msg.Value().Sign() != 0 || !st.evm.Context.CanRedeem(st.state, msg.From(),st.evm.Context.BlockNumber) {
 			return nil, fmt.Errorf("%w: address %v", transfertype.ErrInsufficientFundsForRedeem, msg.From().Hex())
 		}
 		if st.state.GetBalance(msg.From()).Sign() == 0 {
@@ -385,12 +388,15 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		if !st.state.VerifyPid(*msg.To(),msg.From()) {
 			return nil, fmt.Errorf("%w: address %v",transfertype.ErrNotPledged,msg.From().Hex())
 		}
+		if msg.Value().Sign() != 0 {
+			return nil, fmt.Errorf("%w: address %v",transfertype.ErrInvalidDelPid,msg.From().Hex())
+		}
 		if st.state.GetBalance(msg.From()).Sign() == 0 {
 			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
 		}
 	case transfertype.UnlockReward:
 		unlockValue := ethash.CalculateAmountUnlocked(st.evm.Context.BlockNumber,st.state.GetFunds(msg.From()))
-		if msg.Value().Sign() == 0 || msg.Value().Cmp(unlockValue) != 0{
+		if msg.Value().Sign() != 0 || unlockValue.Cmp(big.NewInt(0)) <= 0{
 			return nil,fmt.Errorf("%w: address %v",transfertype.ErrInsufficientUnlockRewardValue,msg.From().Hex())
 		}
 		if st.state.GetBalance(msg.From()).Sign() == 0 {

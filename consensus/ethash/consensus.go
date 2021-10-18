@@ -871,7 +871,7 @@ func CalculateLockedFunds(num *big.Int, vestingSum *big.Int, spec *VestSpec,fund
 func CalculateAmountUnlocked(num *big.Int,funds common.MinedBlocks) *big.Int  {
 	amountUnlocked := big.NewInt(0)
 	for _, vf := range funds {
-		if vf.BlockNumber.Cmp(num) > 0 {
+		if vf.BlockNumber.Cmp(num) >= 0 {
 			continue
 		}
 		amountUnlocked.Add(amountUnlocked, vf.Amount)

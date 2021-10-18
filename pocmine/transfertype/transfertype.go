@@ -27,6 +27,7 @@ var (
 	ErrInsufficientStakingValue = errors.New("the staking amount is too small,Minimum 1000")
 	ErrInsufficientFundsForRedeem = errors.New("insufficient for redeem")
 	ErrInvalidPeriods = errors.New("invalid periods")
+	ErrInvalidDelPid = errors.New("invalid del pid")
 )
 
 //CalculatePledgeAmount	file amount

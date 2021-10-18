@@ -482,8 +482,8 @@ web3._extend({
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
 		new web3._extend.Method({
-			name: 'getTotalLockedFunds',
-			call: 'eth_getTotalLockedFunds',
+			name: 'getAmountUnlocked',
+			call: 'eth_getAmountUnlocked',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter

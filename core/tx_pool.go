@@ -649,7 +649,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		}
 	case transfertype.Redeem:
 		redeemAmount := pool.currentState.GetRedeemAmount(from,pool.chain.CurrentBlock().NumberU64())
-		if tx.Value().Sign() == 0 || redeemAmount.Cmp(tx.Value()) != 0 {
+		if tx.Value().Sign() != 0 || redeemAmount.Cmp(big.NewInt(0)) <= 0 {
 			return transfertype.ErrInsufficientRedeem1
 		}
 		if pool.currentState.GetBalance(from).Cmp(tx.Cost2()) < 0 {
@@ -659,12 +659,15 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		 if !pool.currentState.VerifyPid(*tx.To(),from) {
 		 	return transfertype.ErrNotPledged
 		 }
+		 if tx.Value().Sign() != 0 {
+		 	return transfertype.ErrInvalidDelPid
+		 }
 		if pool.currentState.GetBalance(from).Cmp(tx.Cost2()) < 0 {
 			return ErrInsufficientFunds
 		}
 	case transfertype.UnlockReward:
 		unlockValue := ethash.CalculateAmountUnlocked(pool.chain.CurrentBlock().Number(),pool.currentState.GetFunds(from))
-		if tx.Value().Sign() == 0 || tx.Value().Cmp(unlockValue) != 0{
+		if tx.Value().Sign() != 0 || unlockValue.Cmp(big.NewInt(0)) <= 0{
 			return transfertype.ErrInsufficientUnlockRewardValue
 		}
 		if pool.currentState.GetBalance(from).Cmp(tx.Cost2()) < 0 {
