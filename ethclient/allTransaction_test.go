@@ -34,6 +34,15 @@ func LinkGNC(ip string) *Client{
 	return nil
 }
 
+func TestClient_BalanceAt(t *testing.T) {
+	client := LinkGNC("http://127.0.0.1:8545")
+	balance, err := client.BalanceAt(context.Background(),common.HexToAddress(from),nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(balance)
+}
+
 func TestGeneralTransaction(t *testing.T)  {
 	client := LinkGNC("http://127.0.0.1:8545")
 	tx,err := GeneralTransaction(client,pri,"0x55aB559Aff7B42DA26e80c271EfdA798BD799953",big.NewInt(0).Mul(big.NewInt(19000),big.NewInt(1e18)))

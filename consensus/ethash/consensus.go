@@ -24,7 +24,9 @@ import (
 	"github.com/gnc-project/galaxynetwork/log"
 	"github.com/gnc-project/galaxynetwork/pocmine"
 	"github.com/gnc-project/galaxynetwork/pocmine/challenge"
+	"github.com/gnc-project/galaxynetwork/pocmine/staking"
 	"github.com/gnc-project/poc/difficulty"
+	"github.com/shopspring/decimal"
 	"math/big"
 	"runtime"
 	"sort"
@@ -616,64 +618,24 @@ func accumulateRewards(chain consensus.ChainHeaderReader, state *state.StateDB, 
 
 
 	//staking
-	stakingList := state.GetAllStakingList(common.AllStakingDB)
-	newStakingList := common.StakingList{}
-	stakingMap := make(map[string]*common.StakingWeight,0)
-
-	for _,v := range stakingList {
-		if v.StartNumber + ( v.FrozenPeriod.Uint64() * rewardc.DayBlock ) > header.Number.Uint64() {
-			newStakingList = append(newStakingList,v)
-			if sw,ok := stakingMap[v.Account.Hex()]; ok{
-				sw.Weight = new(big.Int).Add(sw.Weight,rewardc.CalculateWeight(v.FrozenPeriod,v.Value))
-				stakingMap[v.Account.Hex()] = sw
-			}else {
-				stakingWeight := &common.StakingWeight{Account: v.Account, Weight: rewardc.CalculateWeight(v.FrozenPeriod,v.Value)}
-				stakingMap[v.Account.Hex()] = stakingWeight
-			}
-		}else {
-			// free
-			state.AddBalance(v.Account,v.Value)
-		}
-	}
-
-	state.SetStakingList(common.AllStakingDB,newStakingList)
-
-	rewardStaking := make([]*common.StakingWeight, len(stakingMap))
-	totalWeight := big.NewInt(0)
 	stakingReward := new(big.Int).Mul(new(big.Int).Div(reward,big.NewInt(100)),rewardc.StakingRewardProportion)
-	for _,v := range stakingMap {
-		rewardStaking = append(rewardStaking,v)
-		totalWeight.Add(totalWeight,v.Weight)
+	rewardDecimal := decimal.NewFromBigInt(stakingReward,0)
+
+	stakingList := state.GetAllStakingList(common.AllStakingDB)
+	accFree, newStakingList, rewardStaking := staking.CalculateStaking(stakingList,header.Number.Uint64(),rewardDecimal)
+
+	// free
+	for ac,v := range accFree {
+		state.AddBalance(common.HexToAddress(ac),v)
 	}
 
-	if len(stakingMap) <= rewardc.StakingNum {
-		for _, v := range stakingMap {
-			accReward := new(big.Int).Mul(new(big.Int).Div(stakingReward,totalWeight),v.Weight)
-			state.AddBalance(v.Account,accReward)
-		}
-		return
-	}
-
-	sort.SliceStable(rewardStaking, func(first, second int) bool {
-		if rewardStaking[first].Weight.Cmp(rewardStaking[second].Weight) > 0 {
-			return true
-		}
-		if rewardStaking[first].Weight.Cmp(rewardStaking[second].Weight) == 0 &&
-			rewardStaking[first].Account.Hash().Big().Cmp(rewardStaking[second].Account.Hash().Big()) > 0 {
-			return true
-		}
-		return false
-	})
-
-	rewardStaking = rewardStaking[:rewardc.StakingNum]
-	totalWeight = big.NewInt(0)
+	// reward
 	for _,v := range rewardStaking {
-		totalWeight.Add(totalWeight,v.Weight)
+		state.AddBalance(v.Account,v.Reward)
 	}
-	for _, v := range rewardStaking {
-		accReward := new(big.Int).Mul(new(big.Int).Div(stakingReward,totalWeight),v.Weight)
-		state.AddBalance(v.Account,accReward)
-	}
+
+	// setStakingList
+	state.SetStakingList(common.AllStakingDB,newStakingList)
 }
 
 func (ethhash *Ethash) verifyPoc(header, parent *types.Header) error {

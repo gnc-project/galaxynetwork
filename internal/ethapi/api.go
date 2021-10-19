@@ -22,10 +22,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gnc-project/galaxynetwork/common/pidaddress"
+	"github.com/gnc-project/galaxynetwork/pocmine/staking"
 	"github.com/gnc-project/galaxynetwork/pocmine/transfertype"
 	"github.com/gnc-project/galaxynetwork/rewardc"
+	"github.com/shopspring/decimal"
 	"math/big"
-	"sort"
 	"strings"
 	"time"
 
@@ -735,24 +736,42 @@ func (s *PublicBlockChainAPI) GetRedeemAmount(ctx context.Context, address commo
 	return (*hexutil.Big)(state.GetRedeemAmount(address,s.b.CurrentBlock().NumberU64())), state.Error()
 }
 
-func (s *PublicBlockChainAPI) GetStakingWeightByAddr(ctx context.Context, address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (*common.StakingWeight, error) {
+func (s *PublicBlockChainAPI) GetStakingWeightByAddr(ctx context.Context, address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (*common.StakingResult, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
 		return nil, err
 	}
-
 	stakingList := state.GetAllStakingList(common.AllStakingDB)
 
-	stakingWeight := &common.StakingWeight{Account: address,Value: big.NewInt(0),Weight: big.NewInt(0)}
 
-	for _,v := range stakingList {
+	number := s.b.CurrentHeader().Number.Uint64()
+	if blockNr, ok := blockNrOrHash.Number(); ok {
+		number = uint64(blockNr)
+	}
+
+	reward := rewardc.GetReward(number)
+	stakingReward := new(big.Int).Mul(new(big.Int).Div(reward,big.NewInt(100)),rewardc.StakingRewardProportion)
+	rewardDecimal := decimal.NewFromBigInt(stakingReward,0)
+
+	_,newStakingList,stakingWeightList := staking.CalculateStaking(stakingList,number,rewardDecimal)
+
+	resultStakingList := common.StakingList{}
+	for _,v := range newStakingList {
 		if v.Account == address {
-			stakingWeight.Value.Add(stakingWeight.Value,v.Value)
-			stakingWeight.Weight.Add(stakingWeight.Weight,rewardc.CalculateWeight(v.FrozenPeriod,v.Value))
+			resultStakingList = append(resultStakingList,v)
 		}
 	}
 
-	return stakingWeight, state.Error()
+	result := &common.StakingResult{}
+	result.List = resultStakingList
+
+	for _, v := range stakingWeightList{
+		if v.Account == address {
+			result.Weight = v
+		}
+	}
+
+	return result, state.Error()
 }
 
 func (s *PublicBlockChainAPI) GetRewardStakingList(ctx context.Context,blockNrOrHash rpc.BlockNumberOrHash) (common.StakingWeightList, error) {
@@ -763,40 +782,18 @@ func (s *PublicBlockChainAPI) GetRewardStakingList(ctx context.Context,blockNrOr
 
 	stakingList := state.GetAllStakingList(common.AllStakingDB)
 
-	stakingMap := make(map[string]*common.StakingWeight,0)
-	for _, v := range stakingList {
-		if sw,ok := stakingMap[v.Account.Hex()]; ok{
-			sw.Weight = new(big.Int).Add(sw.Weight,rewardc.CalculateWeight(v.FrozenPeriod,v.Value))
-			sw.Value = new(big.Int).Add(sw.Value,v.Value)
-			stakingMap[v.Account.Hex()] = sw
-		}else {
-			stakingWeight := &common.StakingWeight{Account: v.Account, Weight: rewardc.CalculateWeight(v.FrozenPeriod,v.Value), Value: v.Value}
-			stakingMap[v.Account.Hex()] = stakingWeight
-		}
+	number := s.b.CurrentHeader().Number.Uint64()
+	if blockNr, ok := blockNrOrHash.Number(); ok {
+		number = uint64(blockNr)
 	}
 
-	rewardStaking := common.StakingWeightList{}
+	reward := rewardc.GetReward(number)
+	stakingReward := new(big.Int).Mul(new(big.Int).Div(reward,big.NewInt(100)),rewardc.StakingRewardProportion)
+	rewardDecimal := decimal.NewFromBigInt(stakingReward,0)
 
-	for _,v := range stakingMap {
-		rewardStaking = append(rewardStaking,v)
-	}
+	_,_,stakingWeightList := staking.CalculateStaking(stakingList,number,rewardDecimal)
 
-	if len(rewardStaking) <= rewardc.StakingNum {
-		return rewardStaking, state.Error()
-	}
-
-	sort.SliceStable(rewardStaking, func(first, second int) bool {
-		if rewardStaking[first].Weight.Cmp(rewardStaking[second].Weight) > 0 {
-			return true
-		}
-		if rewardStaking[first].Weight.Cmp(rewardStaking[second].Weight) == 0 &&
-			rewardStaking[first].Account.Hash().Big().Cmp(rewardStaking[second].Account.Hash().Big()) > 0 {
-			return true
-		}
-		return false
-	})
-
-	return rewardStaking[:rewardc.StakingNum], state.Error()
+	return stakingWeightList,state.Error()
 }
 
 func (s *PublicBlockChainAPI) GetAmountUnlocked(ctx context.Context,address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {

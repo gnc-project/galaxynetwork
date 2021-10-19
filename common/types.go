@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/shopspring/decimal"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -43,7 +44,7 @@ const (
 var (
 	hashT    = reflect.TypeOf(Hash{})
 	addressT = reflect.TypeOf(Address{})
-	AllStakingDB = HexToAddress("0x513fC36B30cD39e4F287B5633f8c5D0fa67E084C")
+	AllStakingDB = HexToAddress("0x34669E11808f1879929203092CA3093319221068")
 
 )
 
@@ -53,7 +54,8 @@ type Hash [HashLength]byte
 type Staking struct {
 	Account	  	 Address
 	StartNumber	uint64
-	FrozenPeriod *big.Int
+	StopNumber  uint64
+	FrozenPeriod uint64
 	Value        *big.Int
 }
 
@@ -62,7 +64,13 @@ type StakingList []*Staking
 type StakingWeight struct {
 	Account Address
 	Value   *big.Int
-	Weight  *big.Int
+	Weight  decimal.Decimal
+	Reward	*big.Int
+}
+
+type StakingResult struct {
+	Weight *StakingWeight
+	List StakingList
 }
 
 type StakingWeightList []*StakingWeight

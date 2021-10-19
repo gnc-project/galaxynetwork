@@ -399,8 +399,8 @@ func (ec *Client) GetRedeemAmount(ctx context.Context, account common.Address,bl
 	return (*big.Int)(&result), err
 }
 
-func (ec *Client) GetStakingWeightByAddr(ctx context.Context, account common.Address,blockNumber *big.Int) (*common.StakingWeight, error) {
-	var result common.StakingWeight
+func (ec *Client) GetStakingWeightByAddr(ctx context.Context, account common.Address,blockNumber *big.Int) (*common.StakingResult, error) {
+	var result common.StakingResult
 	err := ec.c.CallContext(ctx, &result, "eth_getStakingWeightByAddr", account,toBlockNumArg(blockNumber))
 	return &result, err
 }

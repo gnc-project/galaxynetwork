@@ -195,7 +195,8 @@ func UnlockRewardTransfer(db vm.StateDB, sender common.Address, number *big.Int)
 }
 
 func StakingTransfer(db vm.StateDB, sender common.Address, amount *big.Int,frozenPeriod *big.Int,number *big.Int){
-	staking := &common.Staking{Account: sender, FrozenPeriod: frozenPeriod, Value: amount,StartNumber: number.Uint64()}
+	staking := &common.Staking{Account: sender, FrozenPeriod: frozenPeriod.Uint64(), Value: amount,
+		StartNumber: number.Uint64(),StopNumber: number.Uint64() + frozenPeriod.Uint64() * rewardc.DayBlock}
 	db.SubBalance(sender, amount)
 	db.AddStakingList(common.AllStakingDB,staking)
 }

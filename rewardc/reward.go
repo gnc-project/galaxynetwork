@@ -2,6 +2,7 @@ package rewardc
 
 import (
 	"encoding/hex"
+	"github.com/shopspring/decimal"
 	"math/big"
 )
 const (
@@ -60,11 +61,11 @@ var (
 		30000:new(big.Int).Mul(big.NewInt(844),big.NewInt(1e+16)),
 	}
 
-	StakingBase=map[uint64]*big.Int{
-		90:big.NewInt(10),
-		180:big.NewInt(20),
-		360:big.NewInt(30),
-		1080:big.NewInt(50),
+	StakingBase=map[uint64]float64{
+		90:0.1,
+		180:0.2,
+		360:0.3,
+		1080:0.5,
 	}
 
 	
@@ -89,9 +90,10 @@ func ParsingStakingBase(perHex string) (*big.Int, bool) {
 	return per, true
 }
 
-func CalculateWeight(frozenPeriod,amount *big.Int) *big.Int  {
-	weight := new(big.Int).Mul(frozenPeriod,amount)
-	return new(big.Int).Mul(weight,StakingBase[frozenPeriod.Uint64()])
+func CalculateWeight(frozenPeriod uint64,amount *big.Int) decimal.Decimal {
+	am := decimal.NewFromBigInt(amount,0)
+	rate := decimal.NewFromFloat(StakingBase[frozenPeriod])
+	return am.Mul(rate)
 }
 
 // BigOne bigOne is 1 represented as a big.Int.  It is defined here to avoid

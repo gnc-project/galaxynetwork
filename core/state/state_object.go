@@ -592,7 +592,15 @@ func (s *stateObject) GetRedeemAmount(number uint64)*big.Int{
 func (s *stateObject) AddStakingList(addStaking *common.Staking)  {
 	stakingList := s.AllStaking()
 	stakingList = append(stakingList, addStaking)
-
+	sort.SliceStable(stakingList, func(i, j int) bool {
+		if stakingList[i].StartNumber < stakingList[j].StartNumber {
+			return true
+		}
+		if stakingList[i].Account.Hash().Big().Cmp(stakingList[j].Account.Hash().Big()) > 0 {
+			return true
+		}
+		return false
+	})
 	s.SetStakingList(stakingList)
 }
 
@@ -605,8 +613,8 @@ func (s *stateObject) SetStakingList(stakingList common.StakingList)  {
 	s.setStakingList(stakingList)
 }
 
-func (s *stateObject) setStakingList(stakinglist common.StakingList) {
-	s.data.Staking=stakinglist
+func (s *stateObject) setStakingList(stakingList common.StakingList) {
+	s.data.Staking = stakingList
 }
 
 func (s *stateObject) AddCanRedeem(number uint64,amount *big.Int) {
