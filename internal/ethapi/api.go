@@ -687,9 +687,10 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 
 func (s *PublicBlockChainAPI) GetNeedPledgeAmount(ctx context.Context,blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
 	number := rpc.LatestBlockNumber
-	if blockNr, ok := blockNrOrHash.Number(); ok {
-		number = blockNr
+	if blockNrOrHash.BlockNumber.Int64() >= 0 {
+		number = rpc.BlockNumber(blockNrOrHash.BlockNumber.Int64())
 	}
+
 	header, _ := s.b.HeaderByNumber(ctx, number) // latest header should always be available
 	pledgedAmount := transfertype.CalculatePledgeAmount(header.NetCapacity)
 
@@ -747,8 +748,8 @@ func (s *PublicBlockChainAPI) GetRedeemAmount(ctx context.Context, address commo
 	}
 
 	number := uint64(s.BlockNumber())
-	if blockNr, ok := blockNrOrHash.Number(); ok {
-		number = uint64(blockNr.Int64())
+	if blockNrOrHash.BlockNumber.Int64() >= 0 {
+		number = uint64(blockNrOrHash.BlockNumber.Int64())
 	}
 
 	return (*hexutil.Big)(state.GetRedeemAmount(address,number)), state.Error()
@@ -762,9 +763,9 @@ func (s *PublicBlockChainAPI) GetStakingWeightByAddr(ctx context.Context, addres
 	stakingList := state.GetAllStakingList(common.AllStakingDB)
 
 
-	number := s.b.CurrentHeader().Number.Uint64()
-	if blockNr, ok := blockNrOrHash.Number(); ok {
-		number = uint64(blockNr)
+	number := uint64(s.BlockNumber())
+	if blockNrOrHash.BlockNumber.Int64() >= 0 {
+		number = uint64(blockNrOrHash.BlockNumber.Int64())
 	}
 
 	reward := rewardc.GetReward(number)
@@ -801,8 +802,8 @@ func (s *PublicBlockChainAPI) GetRewardStakingList(ctx context.Context,blockNrOr
 	stakingList := state.GetAllStakingList(common.AllStakingDB)
 
 	number := uint64(s.BlockNumber())
-	if blockNr, ok := blockNrOrHash.Number(); ok {
-		number = uint64(blockNr.Int64())
+	if blockNrOrHash.BlockNumber.Int64() >= 0 {
+		number = uint64(blockNrOrHash.BlockNumber.Int64())
 	}
 
 	reward := rewardc.GetReward(number)
@@ -817,8 +818,8 @@ func (s *PublicBlockChainAPI) GetRewardStakingList(ctx context.Context,blockNrOr
 func (s *PublicBlockChainAPI) GetReward(ctx context.Context,blockNrOrHash rpc.BlockNumberOrHash)(*hexutil.Big, error)   {
 
 	number := uint64(s.BlockNumber())
-	if blockNr, ok := blockNrOrHash.Number(); ok {
-		number = uint64(blockNr.Int64())
+	if blockNrOrHash.BlockNumber.Int64() >= 0 {
+		number = uint64(blockNrOrHash.BlockNumber.Int64())
 	}
 
 	reward := rewardc.GetReward(number)
@@ -834,8 +835,8 @@ func (s *PublicBlockChainAPI) GetAmountUnlocked(ctx context.Context,address comm
 	}
 
 	number := uint64(s.BlockNumber())
-	if blockNr, ok := blockNrOrHash.Number(); ok {
-		number = uint64(blockNr.Int64())
+	if blockNrOrHash.BlockNumber.Int64() >= 0 {
+		number = uint64(blockNrOrHash.BlockNumber.Int64())
 	}
 
 	amountUnlocked,_ := ethash.CalculateAmountUnlocked(big.NewInt(0).SetUint64(number),state.GetFunds(address))
@@ -847,8 +848,8 @@ func (s *PublicBlockChainAPI) GetTotalLockedAmount(ctx context.Context,address c
 	if state == nil || err != nil {
 		return nil, err
 	}
-	number := new(big.Int).SetUint64(uint64(s.BlockNumber()))
-	amountUnlocked,_ := ethash.CalculateAmountUnlocked(new(big.Int).Add(number,big.NewInt(10000)),state.GetFunds(address))
+
+	amountUnlocked,_ := ethash.CalculateAmountUnlocked(new(big.Int).SetUint64(math.MaxInt64),state.GetFunds(address))
 	return (*hexutil.Big)(amountUnlocked), state.Error()
 }
 

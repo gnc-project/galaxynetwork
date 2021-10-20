@@ -3,6 +3,7 @@ package ethclient
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"github.com/gnc-project/galaxynetwork/common"
 	"github.com/gnc-project/galaxynetwork/common/hexutil"
@@ -161,6 +162,11 @@ func TestClient_GetStakingWeightByAddr(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	j,err := json.Marshal(stakingWeight)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(j))
 	fmt.Println(stakingWeight)
 }
 
