@@ -597,24 +597,15 @@ func accumulateRewards(chain consensus.ChainHeaderReader, state *state.StateDB, 
 	reward := rewardc.GetReward(header.Number.Uint64())
 	rewardLock, available, lockedRewardVestingSpec := LockedRewardFromReward(new(big.Int).Mul(new(big.Int).Div(reward,big.NewInt(100)),rewardc.MineRewardProportion))
 
-	// unlocked coins
-	amountUnlocked := CalculateAmountUnlocked(header.Number, state.GetFunds(header.Coinbase))
+	//calculate funds unlocked coins
+	funds := CalculateLockedFunds(header.Number, rewardLock, lockedRewardVestingSpec,state.GetFunds(header.Coinbase))
+	amountUnlocked,newFunds := CalculateAmountUnlocked(header.Number, funds)
 	// Accumulate the rewards for the miner and any included uncles
 	for _, uncle := range uncles {
 		state.AddBalance(uncle.Coinbase, common.Big0)
 	}
 	state.AddBalance(header.Coinbase, new(big.Int).Add(available, amountUnlocked))
-
-	//calculate funds
-	funds := CalculateLockedFunds(header.Number, rewardLock, lockedRewardVestingSpec,state.GetFunds(header.Coinbase))
-
-	for k,v := range funds {
-		if v.BlockNumber.Cmp(header.Number) > 0 {
-			funds = funds[k:]
-			break
-		}
-	}
-	state.SetFunds(header.Coinbase,funds)
+	state.SetFunds(header.Coinbase,newFunds)
 
 
 	//staking
@@ -797,6 +788,7 @@ func LockedRewardFromReward(reward *big.Int) (*big.Int, *big.Int, *VestSpec) {
 
 //CalculateLockedFunds Linear release
 func CalculateLockedFunds(num *big.Int, vestingSum *big.Int, spec *VestSpec,funds common.MinedBlocks) common.MinedBlocks {
+
 	if vestingSum.Cmp(common.Big0) < 0 {
 		return funds
 	}
@@ -805,7 +797,6 @@ func CalculateLockedFunds(num *big.Int, vestingSum *big.Int, spec *VestSpec,fund
 	for i, vf := range funds {
 		epochToIndex[vf.BlockNumber] = i
 	}
-
 
 	vestEpoch := num
 	dayAmount := new(big.Int).Div(vestingSum,big.NewInt(spec.MinExpiration))
@@ -827,17 +818,26 @@ func CalculateLockedFunds(num *big.Int, vestingSum *big.Int, spec *VestSpec,fund
 	sort.SliceStable(funds, func(first, second int) bool {
 		return funds[first].BlockNumber.Cmp(funds[second].BlockNumber) < 0
 	})
+
 	return funds
 }
 
-func CalculateAmountUnlocked(num *big.Int,funds common.MinedBlocks) *big.Int  {
+func CalculateAmountUnlocked(num *big.Int,funds common.MinedBlocks) ( *big.Int, common.MinedBlocks ){
+
 	amountUnlocked := big.NewInt(0)
+	newFunds := common.MinedBlocks{}
+
 	for _, vf := range funds {
 		if vf.BlockNumber.Cmp(num) > 0 {
+			newFunds = append(newFunds,vf)
 			continue
 		}
 		amountUnlocked.Add(amountUnlocked, vf.Amount)
 	}
 
-	return amountUnlocked
+	sort.SliceStable(newFunds, func(first, second int) bool {
+		return newFunds[first].BlockNumber.Cmp(newFunds[second].BlockNumber) < 0
+	})
+
+	return amountUnlocked,newFunds
 }

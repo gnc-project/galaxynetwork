@@ -215,8 +215,12 @@ func (st *StateTransition) buyGas() error {
 		if have, want := st.state.GetBalance(st.msg.From()), balanceCheck; have.Cmp(want) < 0 {
 			return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
 		}
+		pledgeValue := transfertype.CalculatePledgeAmount(st.evm.Context.NetCapacity)
+		if st.msg.Value().Cmp(pledgeValue) != 0 {
+			return fmt.Errorf("%w: address %v",transfertype.ErrInvalidPledgedValue,st.msg.From().Hex())
+		}
 		if st.state.VerifyPid(*st.msg.To(),st.msg.From()) {
-			return fmt.Errorf("%w: address %v",transfertype.ErrNotPledged,st.msg.To().Hex())
+			return fmt.Errorf("%w: address %v",transfertype.ErrDuplicatePledgedPid,st.msg.To().Hex())
 		}
 	case transfertype.Redeem:
 		if have, want := st.state.GetBalance(st.msg.From()), feesOnly; have.Cmp(want) < 0 {
@@ -240,7 +244,7 @@ func (st *StateTransition) buyGas() error {
 		if have, want := st.state.GetBalance(st.msg.From()), feesOnly; have.Cmp(want) < 0 {
 			return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
 		}
-		unlockValue := ethash.CalculateAmountUnlocked(st.evm.Context.BlockNumber,st.state.GetFunds(st.msg.From()))
+		unlockValue,_ := ethash.CalculateAmountUnlocked(st.evm.Context.BlockNumber,st.state.GetFunds(st.msg.From()))
 		if st.msg.Value().Sign() != 0 || unlockValue.Cmp(big.NewInt(0)) <= 0{
 			return transfertype.ErrInsufficientUnlockRewardValue
 		}
@@ -361,21 +365,17 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	st.gas -= gas
 
 	// Check clause 6
-	var snapdata []byte
-	if msg.Data()==nil{
-		snapdata=[]byte{}
-	}else{
-		snapdata=msg.Data()
-	}
-
-	// Check clause 6
-	switch hex.EncodeToString(snapdata) {
+	switch hex.EncodeToString(msg.Data()) {
 	case transfertype.Pledge:
 		if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.From(),msg.Value()) {
 			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
 		}
+		pledgeValue := transfertype.CalculatePledgeAmount(st.evm.Context.NetCapacity)
+		if st.msg.Value().Cmp(pledgeValue) != 0 {
+			return nil,fmt.Errorf("%w: address %v",transfertype.ErrInvalidPledgedValue,st.msg.From().Hex())
+		}
 		if st.state.VerifyPid(*msg.To(),msg.From()) {
-			return nil,fmt.Errorf("%w: address %v",transfertype.ErrNotPledged,st.msg.To().Hex())
+			return nil,fmt.Errorf("%w: address %v",transfertype.ErrDuplicatePledgedPid,st.msg.To().Hex())
 		}
 	case transfertype.Redeem:
 		if msg.Value().Sign() != 0 || !st.evm.Context.CanRedeem(st.state, msg.From(),st.evm.Context.BlockNumber) {
@@ -395,7 +395,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
 		}
 	case transfertype.UnlockReward:
-		unlockValue := ethash.CalculateAmountUnlocked(st.evm.Context.BlockNumber,st.state.GetFunds(msg.From()))
+		unlockValue,_ := ethash.CalculateAmountUnlocked(st.evm.Context.BlockNumber,st.state.GetFunds(msg.From()))
 		if msg.Value().Sign() != 0 || unlockValue.Cmp(big.NewInt(0)) <= 0{
 			return nil,fmt.Errorf("%w: address %v",transfertype.ErrInsufficientUnlockRewardValue,msg.From().Hex())
 		}
@@ -403,11 +403,11 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
 		}
 	default:
-		if len(snapdata) > 7 && strings.EqualFold(hex.EncodeToString(snapdata[:7]),transfertype.Staking) {
+		if len(msg.Data()) > 7 && strings.EqualFold(hex.EncodeToString(msg.Data()[:7]),transfertype.Staking) {
 			if msg.Value().Cmp(rewardc.StakingLowerLimit) < 0{
 				return nil, fmt.Errorf("%w: address %v",transfertype.ErrInsufficientStakingValue,msg.From().Hex())
 			}
-			perHex := hex.EncodeToString(snapdata[7:])
+			perHex := hex.EncodeToString(msg.Data()[7:])
 			if _,ok := rewardc.ParsingStakingBase(perHex); !ok {
 				return nil, fmt.Errorf("%w: address %v",transfertype.ErrInvalidPeriods,msg.From().Hex())
 			}

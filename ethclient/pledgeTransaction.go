@@ -27,7 +27,7 @@ func PledgeTransaction(client *Client,privateKeyString string,pidHex string)(com
 	pid := common.HexToHash(pidHex)
 	toAddress := pidaddress.PIDAddress(fromAddress,pid[:])
 
-	pledgeValue,err := client.GetNeedPledgeAmount(context.Background())
+	pledgeValue,err := client.GetNeedPledgeAmount(context.Background(),nil)
 	if err != nil {
 		return common.Hash{},err
 	}

@@ -104,6 +104,8 @@ type BlockContext struct {
 	Time        *big.Int       // Provides information for TIME
 	Difficulty  *big.Int       // Provides information for DIFFICULTY
 	BaseFee     *big.Int       // Provides information for BASEFEE
+
+	NetCapacity uint64
 }
 
 // TxContext provides the EVM with information about a transaction.

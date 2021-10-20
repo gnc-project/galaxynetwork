@@ -514,6 +514,10 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call ethereum.CallMs
 				if b.pendingState.VerifyPid(*call.To,call.From) {
 					return 0,fmt.Errorf("%w: address %v",transfertype.ErrDuplicatePledgedPid,call.To.Hex())
 				}
+				pledgeValue := transfertype.CalculatePledgeAmount(b.pendingBlock.NetCapacity())
+				if call.Value.Cmp(pledgeValue) != 0 {
+					return 0, transfertype.ErrInvalidPledgedValue
+				}
 				if call.Value.Cmp(available) >= 0 {
 					return 0, errors.New("insufficient funds for transfer")
 				}
@@ -526,7 +530,7 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call ethereum.CallMs
 					return 0, errors.New("insufficient funds for transfer")
 				}
 			case transfertype.UnlockReward:
-				unlockValue := ethash.CalculateAmountUnlocked(b.blockchain.CurrentBlock().Number(),b.pendingState.GetFunds(call.From))
+				unlockValue,_ := ethash.CalculateAmountUnlocked(b.blockchain.CurrentBlock().Number(),b.pendingState.GetFunds(call.From))
 				if call.Value.Sign() != 0 || unlockValue.Cmp(big.NewInt(0)) <= 0{
 					return 0,transfertype.ErrInsufficientUnlockRewardValue
 				}

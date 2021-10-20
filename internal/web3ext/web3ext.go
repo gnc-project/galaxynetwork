@@ -468,6 +468,20 @@ web3._extend({
 			params: 0
 		}),
 		new web3._extend.Method({
+			name: 'getNeedPledgeAmount',
+			call: 'eth_getNeedPledgeAmount',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputDefaultBlockNumberFormatter],
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'getReward',
+			call: 'eth_getReward',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputDefaultBlockNumberFormatter],
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
 			name: 'getAllPledgeAmount',
 			call: 'eth_getAllPledgeAmount',
 			params: 2,
@@ -482,12 +496,64 @@ web3._extend({
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
 		new web3._extend.Method({
+			name: 'getPledgeAmount',
+			call: 'eth_getPledgeAmount',
+			params: 3,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'getPledgeAmountTo',
+			call: 'eth_getPledgeAmountTo',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'getTotalLockedAmount',
+			call: 'eth_getTotalLockedAmount',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
 			name: 'getAmountUnlocked',
 			call: 'eth_getAmountUnlocked',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'getRedeemAmount',
+			call: 'eth_getRedeemAmount',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'getCanRedeemList',
+			call: 'eth_getCanRedeemList',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter]
 		}), 
+		new web3._extend.Method({
+			name: 'getFundsHash',
+			call: 'eth_getFundsHash',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getRewardStakingList',
+			call: 'eth_getRewardStakingList',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputDefaultBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getStakingWeightByAddr',
+			call: 'eth_getStakingWeightByAddr',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter]
+		}),
 		new web3._extend.Method({
 			name: 'chainId',
 			call: 'eth_chainId',

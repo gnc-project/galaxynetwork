@@ -130,7 +130,7 @@ func TestClient_GetPledgeAmount(t *testing.T) {
 
 func TestClient_GetNeedPledgeAmount(t *testing.T) {
 	client := LinkGNC("http://127.0.0.1:8545")
-	amount,err := client.GetNeedPledgeAmount(context.Background())
+	amount,err := client.GetNeedPledgeAmount(context.Background(),nil)
 	if err != nil {
 		t.Fatal(err)
 	}

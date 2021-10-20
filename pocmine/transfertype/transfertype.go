@@ -28,6 +28,7 @@ var (
 	ErrInsufficientFundsForRedeem = errors.New("insufficient for redeem")
 	ErrInvalidPeriods = errors.New("invalid periods")
 	ErrInvalidDelPid = errors.New("invalid del pid")
+	ErrInvalidPledgedValue = errors.New("invalid pledged value")
 )
 
 //CalculatePledgeAmount	file amount

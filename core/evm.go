@@ -54,6 +54,7 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 	if header.BaseFee != nil {
 		baseFee = new(big.Int).Set(header.BaseFee)
 	}
+
 	return vm.BlockContext{
 		CanTransfer:          CanTransfer,
 		Transfer:             Transfer,
@@ -70,6 +71,7 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 		//Difficulty:           new(big.Int).Set(header.Difficulty),
 		BaseFee:              baseFee,
 		GasLimit:             header.GasLimit,
+		NetCapacity:          header.NetCapacity,
 	}
 }
 
@@ -183,7 +185,7 @@ func RedeemTransfer(db vm.StateDB, sender common.Address,number *big.Int){
 // UnlockRewardTransfer Linear release
 func UnlockRewardTransfer(db vm.StateDB, sender common.Address, number *big.Int) {
 	funds := db.GetFunds(sender)
-	amountUnlocked := ethash.CalculateAmountUnlocked(number,funds)
+	amountUnlocked,_ := ethash.CalculateAmountUnlocked(number,funds)
 	db.AddBalance(sender, amountUnlocked)
 	for k,v := range funds {
 		if v.BlockNumber.Cmp(number) > 0 {

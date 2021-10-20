@@ -57,7 +57,7 @@ func TestCalculateLockedFunds(t *testing.T) {
 		fmt.Println("funds --len--->",len(funds),"number",i)
 
 		tim := time.Now().Unix()
-		amount := CalculateAmountUnlocked(big.NewInt(int64(i)),funds)
+		amount,_ := CalculateAmountUnlocked(big.NewInt(int64(i)),funds)
 		//fundsBefore := len(funds)
 		for k,v := range funds {
 			if v.BlockNumber.Cmp(big.NewInt(int64(i))) > 0 {

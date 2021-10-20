@@ -666,7 +666,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 			return ErrInsufficientFunds
 		}
 	case transfertype.UnlockReward:
-		unlockValue := ethash.CalculateAmountUnlocked(pool.chain.CurrentBlock().Number(),pool.currentState.GetFunds(from))
+		unlockValue,_ := ethash.CalculateAmountUnlocked(pool.chain.CurrentBlock().Number(),pool.currentState.GetFunds(from))
 		if tx.Value().Sign() != 0 || unlockValue.Cmp(big.NewInt(0)) <= 0{
 			return transfertype.ErrInsufficientUnlockRewardValue
 		}

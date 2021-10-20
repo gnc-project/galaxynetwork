@@ -21,7 +21,7 @@ const (
 	MinSectorExpiration    = 180
 	ChainID					= 37021
 	BaseCapacity			= 102	//GB
-	TotalCapacity			= 100 	//PB
+	TotalCapacity			= 2 	// default 100PB
 	BasePB					= 1024 * 1024
 
 	StakingNum				= 50

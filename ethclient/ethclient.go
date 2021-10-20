@@ -391,9 +391,9 @@ func (ec *Client) GetCanRedeemList(ctx context.Context, account common.Address,b
 	return result, err
 }
 
-func (ec *Client) GetNeedPledgeAmount(ctx context.Context) (*big.Int, error) {
+func (ec *Client) GetNeedPledgeAmount(ctx context.Context,blockNumber *big.Int) (*big.Int, error) {
 	var result hexutil.Big
-	err := ec.c.CallContext(ctx, &result, "eth_getNeedPledgeAmount")
+	err := ec.c.CallContext(ctx, &result, "eth_getNeedPledgeAmount",toBlockNumArg(blockNumber))
 	return (*big.Int)(&result), err
 }
 
@@ -425,6 +425,12 @@ func (ec *Client) GetTotalLockedAmount(ctx context.Context, account common.Addre
 	var result hexutil.Big
 	err := ec.c.CallContext(ctx, &result, "eth_getTotalLockedAmount", account,toBlockNumArg(blockNumber))
 	return (*big.Int)(&result), err
+}
+
+func (ec *Client) GetFundsHash(ctx context.Context, account common.Address,blockNumber *big.Int) (string, error) {
+	var result string
+	err := ec.c.CallContext(ctx, &result, "eth_getFundsHash", account,toBlockNumArg(blockNumber))
+	return result, err
 }
 
 // StorageAt returns the value of key in the contract storage of the given account.
