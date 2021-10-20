@@ -709,6 +709,15 @@ func (s *PublicBlockChainAPI) GetPledgeAmount(ctx context.Context,address common
 	return (*hexutil.Big)(state.GetPledgeAmount(pidaddress.PIDAddress(address,pid[:]), address)),state.Error()
 }
 
+func (s *PublicBlockChainAPI) GetPledgeAmountTo(ctx context.Context,from,to common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error)  {
+	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	if state == nil || err != nil {
+		return nil, err
+	}
+
+	return (*hexutil.Big)(state.GetPledgeAmount(to,from)),state.Error()
+}
+
 func (s *PublicBlockChainAPI) GetTotalCapacity(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {

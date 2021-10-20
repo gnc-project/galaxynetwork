@@ -374,9 +374,13 @@ func (ec *Client) VerifyPid(ctx context.Context, account common.Address, pidHex 
 
 func (ec *Client) GetPledgeAmount(ctx context.Context,account common.Address, pidHex string, blockNumber *big.Int) (*big.Int, error) {
 	var result hexutil.Big
-
 	err := ec.c.CallContext(ctx, &result, "eth_getPledgeAmount", account, pidHex, toBlockNumArg(blockNumber))
+	return (*big.Int)(&result), err
+}
 
+func (ec *Client) GetPledgeAmountTo(ctx context.Context,from,to common.Address,blockNumber *big.Int) (*big.Int, error) {
+	var result hexutil.Big
+	err := ec.c.CallContext(ctx, &result, "eth_getPledgeAmountTo",from,to,toBlockNumArg(blockNumber))
 	return (*big.Int)(&result), err
 }
 
