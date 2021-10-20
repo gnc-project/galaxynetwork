@@ -22,7 +22,7 @@ func CalculateStaking(list common.StakingList,number uint64,reward decimal.Decim
 				sw.Value = sw.Value.Add(sw.Value,v.Value)
 				stakingMap[v.Account.Hex()] = sw
 			}else {
-				stakingWeight := &common.StakingWeight{Account: v.Account, Weight: rewardc.CalculateWeight(v.FrozenPeriod,v.Value),Value: v.Value}
+				stakingWeight := &common.StakingWeight{Account: v.Account, Weight: rewardc.CalculateWeight(v.FrozenPeriod,v.Value),Value: new(big.Int).Set(v.Value)}
 				stakingMap[v.Account.Hex()] = stakingWeight
 			}
 
@@ -30,7 +30,7 @@ func CalculateStaking(list common.StakingList,number uint64,reward decimal.Decim
 			if freeAmount,ok := accFree[v.Account.Hex()]; ok {
 				accFree[v.Account.Hex()] = freeAmount.Add(freeAmount,v.Value)
 			}else {
-				accFree[v.Account.Hex()] = v.Value
+				accFree[v.Account.Hex()] = new(big.Int).Set(v.Value)
 			}
 		}
 	}

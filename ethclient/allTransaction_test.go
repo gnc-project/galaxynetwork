@@ -14,7 +14,7 @@ import (
 
 var (
 	pri		=	"24ccbb7a360ab4c728e1463db0a0d5b67c7923f91349520e6f89a10fb1e9933e"
-	pri2	=	"0054f7c106f606f47dfedca3c3c15366a9a768661cf4dfc6c05b11550414681c"
+	pri2	=	"2399a673a048b11de73c9f248168c6e90cf02ab39cd6478bfbdccff6bee3f753"
 	from   	= 	"0x461618Dc4480246eBAabb48169BC535e03e9f86E"
 )
 
@@ -89,7 +89,7 @@ func TestRedeemTransaction(t *testing.T) {
 func TestStakingTransaction(t *testing.T) {
 	client := LinkGNC("http://127.0.0.1:8545")
 	// periods ---> in keys of rewardc.StakingBase  90  180 360 1080
-	tx,err := StakingTransaction(client,pri,new(big.Int).Mul(big.NewInt(10000),big.NewInt(1e18)),180)
+	tx,err := StakingTransaction(client,pri2,new(big.Int).Mul(big.NewInt(50000),big.NewInt(1e18)),180)
 	if err != nil {
 		t.Fatal(err)
 	}
