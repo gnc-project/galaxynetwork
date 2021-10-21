@@ -17,8 +17,11 @@
 package core
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"github.com/gnc-project/galaxynetwork/common"
 	"github.com/gnc-project/galaxynetwork/common/pidaddress"
 	"time"
 
@@ -105,6 +108,24 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 	if receiptSha != header.ReceiptHash {
 		return fmt.Errorf("invalid receipt root hash (remote: %x local: %x)", header.ReceiptHash, receiptSha)
 	}
+
+
+	fund1 := statedb.GetFunds(common.HexToAddress("0xe1500ea2146dc05cd55b1b33bb5ad277141a5f4d"))
+	j1,err1 := json.Marshal(fund1)
+	if err1 != nil {
+		panic(err1)
+	}
+	hash1 := sha256.Sum256(j1)
+	fmt.Println(hex.EncodeToString(hash1[:]))
+
+	fund2 := statedb.GetFunds(common.HexToAddress("0xccfd71131015d9dcddf3f2e97b0aa7be11e1bf5f"))
+	j2,err2 := json.Marshal(fund2)
+	if err2 != nil {
+		panic(err2)
+	}
+	hash2 := sha256.Sum256(j2)
+	fmt.Println(hex.EncodeToString(hash2[:]))
+
 	// Validate the state root against the received state root and throw
 	// an error if they don't match.
 	now := time.Now().Unix()

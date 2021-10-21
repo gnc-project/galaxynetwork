@@ -595,10 +595,10 @@ func accumulateRewards(chain consensus.ChainHeaderReader, state *state.StateDB, 
 		return
 	}
 	reward := rewardc.GetReward(header.Number.Uint64())
-	rewardLock, available, lockedRewardVestingSpec := LockedRewardFromReward(new(big.Int).Mul(new(big.Int).Div(reward,big.NewInt(100)),rewardc.MineRewardProportion))
+	rewardLock, available := LockedRewardFromReward(new(big.Int).Mul(new(big.Int).Div(reward,big.NewInt(100)),rewardc.MineRewardProportion))
 
 	//calculate funds unlocked coins
-	funds := CalculateLockedFunds(header.Number, rewardLock, lockedRewardVestingSpec,state.GetFunds(header.Coinbase))
+	funds := CalculateLockedFunds(header.Number, rewardLock,state.GetFunds(header.Coinbase))
 	amountUnlocked,newFunds := CalculateAmountUnlocked(header.Number, funds)
 	// Accumulate the rewards for the miner and any included uncles
 	for _, uncle := range uncles {
@@ -765,61 +765,57 @@ type VestingFund struct {
 	Epoch  int64
 	Amount *big.Int
 }
+//VestPeriod:		int64(rewardc.MinSectorExpiration * rewardc.DayBlock),
 
 type VestSpec struct {
 	MinExpiration int64
-	VestPeriod    int64
 	StepDuration  int64
 }
 
-var RewardVestingSpec = VestSpec{
-	MinExpiration: rewardc.MinSectorExpiration,
-	VestPeriod:    int64(rewardc.MinSectorExpiration * rewardc.DayBlock),
-	StepDuration:  int64(1 * rewardc.DayBlock),
-}
-
 // LockedRewardFromReward Calculate and lock 75% of coins
-func LockedRewardFromReward(reward *big.Int) (*big.Int, *big.Int, *VestSpec) {
-	spec := &RewardVestingSpec
+func LockedRewardFromReward(reward *big.Int) (*big.Int, *big.Int) {
 	lockAmount := big.NewInt(0).Div(big.NewInt(0).Mul(reward, LockedRewardFactorNum), LockedRewardFactorDenom)
-	return lockAmount, big.NewInt(0).Sub(reward, lockAmount), spec
+	return lockAmount, big.NewInt(0).Sub(reward, lockAmount)
 }
 
 
 //CalculateLockedFunds Linear release
-func CalculateLockedFunds(num *big.Int, vestingSum *big.Int, spec *VestSpec,funds common.MinedBlocks) common.MinedBlocks {
+func CalculateLockedFunds(num *big.Int, rewardLock *big.Int,funds common.MinedBlocks) common.MinedBlocks {
 
-	if vestingSum.Cmp(common.Big0) < 0 {
+	if rewardLock.Cmp(common.Big0) < 0 {
 		return funds
 	}
 
-	epochToIndex := make(map[*big.Int]int, len(funds))
-	for i, vf := range funds {
-		epochToIndex[vf.BlockNumber] = i
+	fundsMap := make(map[*big.Int]*common.MinedBlock, len(funds))
+	for _, vf := range funds {
+		fundsMap[vf.BlockNumber] = vf
 	}
 
 	vestEpoch := num
-	dayAmount := new(big.Int).Div(vestingSum,big.NewInt(spec.MinExpiration))
+	dayAmount := new(big.Int).Div(rewardLock,big.NewInt(rewardc.MinSectorExpiration))
 
-	for i:=int64(0); i < spec.MinExpiration; i++{
+	newFunds := common.MinedBlocks{}
+	for i:=int64(0); i < rewardc.MinSectorExpiration; i++{
 
-		vestEpoch = new(big.Int).Add(vestEpoch,big.NewInt(spec.StepDuration))
+		vestEpoch = new(big.Int).Add(vestEpoch,big.NewInt(rewardc.DayBlock))
 
-		if index, ok := epochToIndex[vestEpoch]; ok {
-			currentAmt := funds[index].Amount
-			funds[index].Amount = big.NewInt(0).Add(currentAmt, dayAmount)
+		if mb, ok := fundsMap[vestEpoch]; ok {
+			mb.Amount = new(big.Int).Add(mb.Amount,dayAmount)
+			fundsMap[vestEpoch] = mb
 		}else {
-			entry := common.MinedBlock{BlockNumber: vestEpoch,Amount: dayAmount}
-			funds = append(funds, &entry)
+			fundsMap[vestEpoch] = &common.MinedBlock{BlockNumber: vestEpoch,Amount: dayAmount}
 		}
-
 	}
 
-	sort.SliceStable(funds, func(first, second int) bool {
-		return funds[first].BlockNumber.Cmp(funds[second].BlockNumber) < 0
+	for _,v := range fundsMap {
+		newFunds = append(newFunds, v)
+	}
+
+	sort.SliceStable(newFunds, func(first, second int) bool {
+		return newFunds[first].BlockNumber.Cmp(newFunds[second].BlockNumber) < 0
 	})
 
-	return funds
+	return newFunds
 }
 
 func CalculateAmountUnlocked(num *big.Int,funds common.MinedBlocks) ( *big.Int, common.MinedBlocks ){

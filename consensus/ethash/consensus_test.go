@@ -20,15 +20,13 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"math/big"
-	"math/rand"
-	"testing"
-	"time"
-
 	"github.com/gnc-project/galaxynetwork/common"
 	"github.com/gnc-project/galaxynetwork/common/math"
 	"github.com/gnc-project/galaxynetwork/core/types"
 	"github.com/gnc-project/galaxynetwork/params"
+	"math/big"
+	"math/rand"
+	"testing"
 )
 
 type diffTest struct {
@@ -41,34 +39,43 @@ type diffTest struct {
 
 func TestLockedRewardFromReward(t *testing.T)  {
 	r := big.NewInt(0).Mul(big.NewInt(600),big.NewInt(1e18))
-	a,b,c := LockedRewardFromReward(r)
-	fmt.Println(a,b,c)
+	a,b := LockedRewardFromReward(r)
+	fmt.Println(a,b)
 }
 
 func TestCalculateLockedFunds(t *testing.T) {
 
-	spec := &RewardVestingSpec
-
 	funds := common.MinedBlocks{}
-	raw := big.NewInt(360 *1e8)
+	reawrd := new(big.Int).Mul(big.NewInt(360),big.NewInt(1e18))
+	amount := big.NewInt(0)
 	for i:=1; i<=100000;i++ {
 
-		funds = CalculateLockedFunds(big.NewInt(int64(i)),raw,spec,funds)
-		fmt.Println("funds --len--->",len(funds),"number",i)
-
-		tim := time.Now().Unix()
-		amount,_ := CalculateAmountUnlocked(big.NewInt(int64(i)),funds)
-		//fundsBefore := len(funds)
-		for k,v := range funds {
-			if v.BlockNumber.Cmp(big.NewInt(int64(i))) > 0 {
-				funds = funds[k:]
-				//fmt.Printf("blockNumber=%v  k=%v  fundsAfter=%v fundsBefore=%v \n",v.BlockNumber,k, len(funds),fundsBefore)
-				break
-			}
+		funds = CalculateLockedFunds(big.NewInt(int64(i)),reawrd,funds)
+		amount,funds = CalculateAmountUnlocked(big.NewInt(int64(i)),funds)
+		//fmt.Println("funds --len--->",len(funds),"number",i)
+		fmp := make(map[*big.Int]interface{})
+		for _,v := range funds {
+			fmp[v.BlockNumber] = v
 		}
-		fmt.Println(time.Now().Unix()-tim)
+		//fmt.Println("fmp --len--->",len(fmp),"number",i)
 
-		fmt.Println("amount ---",amount,"funds len-->", len(funds))
+		if len(funds) != len(fmp) {
+			panic("nooooooooooooooooooooooooooooooo")
+		}
+		fmt.Println("number",i,"amount",amount,"funds",len(funds),"fmp",len(fmp))
+		//tim := time.Now().Unix()
+		//amount,_ := CalculateAmountUnlocked(big.NewInt(int64(i)),funds)
+		////fundsBefore := len(funds)
+		//for k,v := range funds {
+		//	if v.BlockNumber.Cmp(big.NewInt(int64(i))) > 0 {
+		//		funds = funds[k:]
+		//		//fmt.Printf("blockNumber=%v  k=%v  fundsAfter=%v fundsBefore=%v \n",v.BlockNumber,k, len(funds),fundsBefore)
+		//		break
+		//	}
+		//}
+		//fmt.Println(time.Now().Unix()-tim)
+		//
+		//fmt.Println("amount ---",amount,"funds len-->", len(funds))
 	}
 
 

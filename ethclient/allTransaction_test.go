@@ -89,7 +89,7 @@ func TestRedeemTransaction(t *testing.T) {
 func TestStakingTransaction(t *testing.T) {
 	client := LinkGNC("http://127.0.0.1:8545")
 	// periods ---> in keys of rewardc.StakingBase  90  180 360 1080
-	tx,err := StakingTransaction(client,pri2,new(big.Int).Mul(big.NewInt(50000),big.NewInt(1e18)),180)
+	tx,err := StakingTransaction(client,pri2,new(big.Int).Mul(big.NewInt(20000),big.NewInt(1e18)),180)
 	if err != nil {
 		t.Fatal(err)
 	}
