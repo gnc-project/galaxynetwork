@@ -468,6 +468,12 @@ web3._extend({
 			params: 0
 		}),
 		new web3._extend.Method({
+			name: 'getNetPledgeAmount',
+			call: 'eth_getNetPledgeAmount',
+			params: 1,
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
 			name: 'getNeedPledgeAmount',
 			call: 'eth_getNeedPledgeAmount',
 			params: 1,
@@ -499,14 +505,14 @@ web3._extend({
 			name: 'getPledgeAmount',
 			call: 'eth_getPledgeAmount',
 			params: 3,
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,web3._extend.formatters.inputDefaultBlockNumberFormatter],
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
 		new web3._extend.Method({
 			name: 'getPledgeAmountTo',
 			call: 'eth_getPledgeAmountTo',
-			params: 2,
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
+			params: 3,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
 		new web3._extend.Method({

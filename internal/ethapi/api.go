@@ -697,6 +697,11 @@ func (s *PublicBlockChainAPI) GetNeedPledgeAmount(ctx context.Context,blockNrOrH
 	return (*hexutil.Big)(pledgedAmount), nil
 }
 
+func (s *PublicBlockChainAPI) GetNetPledgeAmount(ctx context.Context,netCap uint64) (*hexutil.Big, error) {
+	pledgedAmount := transfertype.CalculatePledgeAmount(netCap)
+	return (*hexutil.Big)(pledgedAmount), nil
+}
+
 func (s *PublicBlockChainAPI) GetAllPledgeAmount(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {

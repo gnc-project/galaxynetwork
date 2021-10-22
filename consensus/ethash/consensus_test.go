@@ -49,25 +49,29 @@ func TestCalculateLockedFunds(t *testing.T) {
 	funds := common.MinedBlocks{}
 	reawrd := new(big.Int).Mul(big.NewInt(360),big.NewInt(1e18))
 	amount := big.NewInt(0)
-	for i:=1; i<=100000;i++ {
+	total := big.NewInt(0)
+	for i:=1; i<= 21;i++ {
 
 		now := time.Now().UnixNano()/1e6
-		funds = CalculateLockedFunds(big.NewInt(int64(i)),reawrd,funds)
+		if i < 12 {
+			funds = CalculateLockedFunds(big.NewInt(int64(i)),reawrd,funds)
+		}
 		amount,funds = CalculateAmountUnlocked(big.NewInt(int64(i)),funds)
 		fmt.Println("ep",time.Now().UnixNano() /1e6 - now)
 		fmp := make(map[*big.Int]interface{})
-
 		for _,v := range funds {
 			fmp[v.BlockNumber] = v
 			//fmt.Println(v)
 		}
-		//fmt.Println("fmp --len--->",len(fmp),"number",i)
-
 		if len(funds) != len(fmp) {
 			panic("nooooooooooooooooooooooooooooooo")
 		}
-		fmt.Println("number",i,"amount",amount,"funds",len(funds),"fmp",len(fmp))
+		total = new(big.Int).Add(total,amount)
+		fmt.Println("number",i,"amount",amount,"funds",len(funds),"fmp",len(fmp),"total",total)
 		fmt.Println("---------------------------------------------------------------------------------------------------------")
+
+		//fmt.Println("fmp --len--->",len(fmp),"number",i)
+
 		//tim := time.Now().Unix()
 		//amount,_ := CalculateAmountUnlocked(big.NewInt(int64(i)),funds)
 		////fundsBefore := len(funds)

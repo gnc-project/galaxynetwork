@@ -28,38 +28,6 @@ const (
 )
 
 var (
-	PledgeBase =map[uint64]*big.Int{
-		100:new(big.Int).Mul(big.NewInt(56250),big.NewInt(1e+16)),
-		200:new(big.Int).Mul(big.NewInt(49219),big.NewInt(1e+16)),
-		300:new(big.Int).Mul(big.NewInt(42188),big.NewInt(1e+16)),
-		400:new(big.Int).Mul(big.NewInt(31641),big.NewInt(1e+16)),
-		500:new(big.Int).Mul(big.NewInt(25313),big.NewInt(1e+16)),
-		600:new(big.Int).Mul(big.NewInt(21094),big.NewInt(1e+16)),
-		700:new(big.Int).Mul(big.NewInt(18080),big.NewInt(1e+16)),
-		800:new(big.Int).Mul(big.NewInt(15820),big.NewInt(1e+16)),
-		900:new(big.Int).Mul(big.NewInt(15625),big.NewInt(1e+16)),
-		1000:new(big.Int).Mul(big.NewInt(14625),big.NewInt(1e+16)),
-		1100:new(big.Int).Mul(big.NewInt(14318),big.NewInt(1e+16)),
-		1200:new(big.Int).Mul(big.NewInt(14063),big.NewInt(1e+16)),
-		1300:new(big.Int).Mul(big.NewInt(12981),big.NewInt(1e+16)),
-		1400:new(big.Int).Mul(big.NewInt(12054),big.NewInt(1e+16)),
-		1500:new(big.Int).Mul(big.NewInt(11250),big.NewInt(1e+16)),
-		1600:new(big.Int).Mul(big.NewInt(10547),big.NewInt(1e+16)),
-		1700:new(big.Int).Mul(big.NewInt(9926),big.NewInt(1e+16)),
-		1800:new(big.Int).Mul(big.NewInt(9375),big.NewInt(1e+16)),
-		1900:new(big.Int).Mul(big.NewInt(8882),big.NewInt(1e+16)),
-		2000:new(big.Int).Mul(big.NewInt(8438),big.NewInt(1e+16)),
-		3000:new(big.Int).Mul(big.NewInt(7969),big.NewInt(1e+16)),
-		4000:new(big.Int).Mul(big.NewInt(6328),big.NewInt(1e+16)),
-		5000:new(big.Int).Mul(big.NewInt(5063),big.NewInt(1e+16)),
-		6000:new(big.Int).Mul(big.NewInt(4219),big.NewInt(1e+16)),
-		7000:new(big.Int).Mul(big.NewInt(3616),big.NewInt(1e+16)),
-		8000:new(big.Int).Mul(big.NewInt(3164),big.NewInt(1e+16)),
-		9000:new(big.Int).Mul(big.NewInt(2813),big.NewInt(1e+16)),
-		10000:new(big.Int).Mul(big.NewInt(2531),big.NewInt(1e+16)),
-		20000:new(big.Int).Mul(big.NewInt(1266),big.NewInt(1e+16)),
-		30000:new(big.Int).Mul(big.NewInt(844),big.NewInt(1e+16)),
-	}
 
 	StakingBase=map[uint64]float64{
 		90:0.1,
@@ -68,7 +36,6 @@ var (
 		1080:0.5,
 	}
 
-	
 	StakingRewardProportion=big.NewInt(20)
 	MineRewardProportion=big.NewInt(80)
 
