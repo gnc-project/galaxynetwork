@@ -1506,6 +1506,7 @@ func RPCMarshalHeader(head *types.Header, engine consensus.Engine) map[string]in
 		"proof":			hexutil.Bytes(head.Proof),
 		"Signed":           hexutil.Bytes(head.Signed),
 		"netCapacity":      hexutil.Uint64(head.NetCapacity),
+		"parentCapacity":	hexutil.Uint64(head.ParentCapacity),
 	}
 
 	if head.BaseFee != nil {

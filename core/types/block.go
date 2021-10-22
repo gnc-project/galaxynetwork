@@ -19,7 +19,10 @@ package types
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
+	"github.com/gnc-project/galaxynetwork/pocmine/transfertype"
+	"github.com/gnc-project/galaxynetwork/rewardc"
 	"io"
 	"math/big"
 	"reflect"
@@ -91,6 +94,7 @@ type Header struct {
 	Signed	  []byte			`json:"signed"           gencodec:"required"`
 
 	NetCapacity uint64         `json:"netCapacity"     gencodec:"required"`
+	ParentCapacity uint64	   `json:"parent_capacity" gencodec:"required"`
 
 	MixDigest   common.Hash    `json:"mixHash"`
 	Nonce       BlockNonce     `json:"nonce"`
@@ -112,6 +116,7 @@ type headerMarshaling struct {
 	Proof       hexutil.Bytes
 	Signed      hexutil.Bytes
 	NetCapacity  hexutil.Uint64
+	ParentCapacity hexutil.Uint64
 	Hash       common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
 }
 
@@ -208,6 +213,18 @@ type extblock struct {
 func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*Receipt, hasher TrieHasher) *Block {
 	b := &Block{header: CopyHeader(header), td: new(big.Int)}
 
+	b.header.NetCapacity = header.ParentCapacity
+
+	for _,v := range txs {
+		switch hex.EncodeToString(v.Data()) {
+		case transfertype.Pledge:
+			b.header.NetCapacity = b.header.NetCapacity + rewardc.BaseCapacity
+		case transfertype.DelPid:
+			if b.header.NetCapacity >= rewardc.BaseCapacity {
+				b.header.NetCapacity = b.header.NetCapacity - rewardc.BaseCapacity
+			}
+		}
+	}
 	// TODO: panic if len(txs) != len(receipts)
 	if len(txs) == 0 {
 		b.header.TxHash = EmptyRootHash
@@ -316,6 +333,7 @@ func (b *Block) TxHash() common.Hash      { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
 func (b *Block) NetCapacity() uint64      {return b.header.NetCapacity}
+func (b *Block) ParentCapacity() uint64 { return b.header.ParentCapacity}
 func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Extra) }
 
 func (b *Block) BaseFee() *big.Int {

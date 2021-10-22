@@ -514,7 +514,7 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call ethereum.CallMs
 				if b.pendingState.VerifyPid(*call.To,call.From) {
 					return 0,fmt.Errorf("%w: address %v",transfertype.ErrDuplicatePledgedPid,call.To.Hex())
 				}
-				pledgeValue := transfertype.CalculatePledgeAmount(b.pendingBlock.NetCapacity())
+				pledgeValue := transfertype.CalculatePledgeAmount(b.blockchain.CurrentBlock().NetCapacity())
 				if call.Value.Cmp(pledgeValue) != 0 {
 					return 0, transfertype.ErrInvalidPledgedValue
 				}

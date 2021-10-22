@@ -334,11 +334,11 @@ func (l *txList) Forward(threshold uint64) types.Transactions {
 func (l *txList) Filter(costLimit *big.Int,from common.Address,pool *TxPool,gasLimit uint64) (types.Transactions, types.Transactions) {
 	// If all transactions are below the threshold, short circuit
 	if l.costcap.Cmp(costLimit) <= 0 && l.gascap <= gasLimit {
-		return nil, nil
+	}else {
+		l.costcap = new(big.Int).Set(costLimit) // Lower the caps to the thresholds
+		l.gascap = gasLimit
 	}
 
-	l.costcap = new(big.Int).Set(costLimit) // Lower the caps to the thresholds
-	l.gascap = gasLimit
 	// Filter out all the transactions above the account's funds
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
 		switch hex.EncodeToString(tx.Data()) {

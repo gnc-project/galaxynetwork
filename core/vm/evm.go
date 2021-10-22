@@ -195,26 +195,20 @@ func (evm *EVM) Interpreter() *EVMInterpreter {
 // parameters. It also handles any necessary value transfer required and takes
 // the necessary steps to create accounts and reverses the state in case of an
 // execution error or failed value transfer.
-func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64,netcapacity *big.Int, err error) {
-	capacity:=big.NewInt(0)
+func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
 	if evm.Config.NoRecursion && evm.depth > 0 {
-		return nil, gas, big.NewInt(0),nil
+		return nil, gas, nil
 
 	}
 	// Fail if we're trying to execute above the call depth limit
 	if evm.depth > int(params.CallCreateDepth) {
-		return nil, gas,big.NewInt(0), ErrDepth
+		return nil, gas, ErrDepth
 
 	}
-	var snapdata []byte
-	if input == nil {
-		snapdata = []byte{}
-	} else {
-		snapdata = input
-	}
+
 	// Fail if we're trying to transfer more than the available balance
 	if value.Sign() != 0 && !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
-		return nil, gas,big.NewInt(0), ErrInsufficientBalance
+		return nil, gas, ErrInsufficientBalance
 
 	}
 	snapshot := evm.StateDB.Snapshot()
@@ -227,26 +221,24 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 				evm.Config.Tracer.CaptureStart(evm, caller.Address(), addr, false, input, gas, value)
 				evm.Config.Tracer.CaptureEnd(ret, 0, 0, nil)
 			}
-			return nil, gas, big.NewInt(0),nil
+			return nil, gas, nil
 
 		}
 		evm.StateDB.CreateAccount(addr)
 	}
 
-	switch hex.EncodeToString(snapdata) {
+	switch hex.EncodeToString(input) {
 		case transfertype.Pledge:
 			evm.Context.PledgeTransfer(evm.StateDB, caller.Address(), addr, value)
-			capacity = big.NewInt(rewardc.BaseCapacity)
 		case transfertype.Redeem:
 			evm.Context.RedeemTransfer(evm.StateDB, caller.Address(),evm.Context.BlockNumber)
 		case transfertype.DelPid:
 			evm.Context.DelectPidTransfer(evm.StateDB, caller.Address(), addr,evm.Context.BlockNumber)
-			capacity=new(big.Int).Mul(big.NewInt(rewardc.BaseCapacity),big.NewInt(-1))
 		case transfertype.UnlockReward:
 			evm.Context.UnlockRewardTransfer(evm.StateDB, caller.Address(), evm.Context.BlockNumber)
 		default:
-			if len(snapdata) > 7 && strings.EqualFold(hex.EncodeToString(snapdata[:7]),transfertype.Staking) {
-				if per,ok := rewardc.ParsingStakingBase(hex.EncodeToString(snapdata[7:]));ok {
+			if len(input) > 7 && strings.EqualFold(hex.EncodeToString(input[:7]),transfertype.Staking) {
+				if per,ok := rewardc.ParsingStakingBase(hex.EncodeToString(input[7:]));ok {
 					evm.Context.StakingTransfer(evm.StateDB,caller.Address(),value,per,evm.Context.BlockNumber)
 				}
 			}else {
@@ -292,7 +284,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		//} else {
 		//	evm.StateDB.DiscardSnapshot(snapshot)
 	}
-	return ret, gas, capacity,err
+	return ret, gas,err
 
 }
 

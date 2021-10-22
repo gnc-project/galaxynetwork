@@ -55,15 +55,19 @@ func TestGeneralTransaction(t *testing.T)  {
 
 func TestPledgeTransaction(t *testing.T) {
 	client := LinkGNC("http://127.0.0.1:8545")
-	hash := sha256.Sum256([]byte("4"))
-	pidHex := hexutil.Encode(hash[:])
 
-	tx,err := PledgeTransaction(client,pri,pidHex)
-	if err!=nil{
-		t.Fatal("------------->",err)
-		return
+	for i:=60000;i<60010;i++{
+		hash := sha256.Sum256([]byte(fmt.Sprintf("%d",i)))
+		pidHex := hexutil.Encode(hash[:])
+
+		tx,err := PledgeTransaction(client,pri,pidHex)
+		if err!=nil{
+			t.Fatal("------------->",err)
+			return
+		}
+		fmt.Println("txHex--->",tx.Hex())
 	}
-	fmt.Println("txHex--->",tx.Hex())
+
 }
 func TestDeletePidTransaction(t *testing.T) {
 	client := LinkGNC("http://127.0.0.1:8545")

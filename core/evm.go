@@ -54,7 +54,6 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 	if header.BaseFee != nil {
 		baseFee = new(big.Int).Set(header.BaseFee)
 	}
-
 	return vm.BlockContext{
 		CanTransfer:          CanTransfer,
 		Transfer:             Transfer,
@@ -71,7 +70,7 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 		//Difficulty:           new(big.Int).Set(header.Difficulty),
 		BaseFee:              baseFee,
 		GasLimit:             header.GasLimit,
-		NetCapacity:          header.NetCapacity,
+		NetCapacity:          header.ParentCapacity,
 	}
 }
 
