@@ -185,15 +185,9 @@ func RedeemTransfer(db vm.StateDB, sender common.Address,number *big.Int){
 // UnlockRewardTransfer Linear release
 func UnlockRewardTransfer(db vm.StateDB, sender common.Address, number *big.Int) {
 	funds := db.GetFunds(sender)
-	amountUnlocked,_ := ethash.CalculateAmountUnlocked(number,funds)
+	amountUnlocked,newFunds := ethash.CalculateAmountUnlocked(number,funds)
 	db.AddBalance(sender, amountUnlocked)
-	for k,v := range funds {
-		if v.BlockNumber.Cmp(number) > 0 {
-			funds = funds[k:]
-			break
-		}
-	}
-	db.SetFunds(sender,funds)
+	db.SetFunds(sender,newFunds)
 }
 
 func StakingTransfer(db vm.StateDB, sender common.Address, amount *big.Int,frozenPeriod *big.Int,number *big.Int){

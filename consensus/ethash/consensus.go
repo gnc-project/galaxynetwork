@@ -786,9 +786,9 @@ func CalculateLockedFunds(num *big.Int, rewardLock *big.Int,funds common.MinedBl
 		return funds
 	}
 
-	fundsMap := make(map[*big.Int]*common.MinedBlock, len(funds))
+	fundsMap := make(map[uint64]*common.MinedBlock, len(funds))
 	for _, vf := range funds {
-		fundsMap[vf.BlockNumber] = vf
+		fundsMap[vf.BlockNumber.Uint64()] = vf
 	}
 
 	vestEpoch := num
@@ -799,11 +799,11 @@ func CalculateLockedFunds(num *big.Int, rewardLock *big.Int,funds common.MinedBl
 
 		vestEpoch = new(big.Int).Add(vestEpoch,big.NewInt(rewardc.DayBlock))
 
-		if mb, ok := fundsMap[vestEpoch]; ok {
+		if mb, ok := fundsMap[vestEpoch.Uint64()]; ok {
 			mb.Amount = new(big.Int).Add(mb.Amount,dayAmount)
-			fundsMap[vestEpoch] = mb
+			fundsMap[vestEpoch.Uint64()] = mb
 		}else {
-			fundsMap[vestEpoch] = &common.MinedBlock{BlockNumber: vestEpoch,Amount: dayAmount}
+			fundsMap[vestEpoch.Uint64()] = &common.MinedBlock{BlockNumber: new(big.Int).SetUint64(vestEpoch.Uint64()),Amount: dayAmount}
 		}
 	}
 

@@ -27,6 +27,7 @@ import (
 	"math/big"
 	"math/rand"
 	"testing"
+	"time"
 )
 
 type diffTest struct {
@@ -50,12 +51,15 @@ func TestCalculateLockedFunds(t *testing.T) {
 	amount := big.NewInt(0)
 	for i:=1; i<=100000;i++ {
 
+		now := time.Now().UnixNano()/1e6
 		funds = CalculateLockedFunds(big.NewInt(int64(i)),reawrd,funds)
 		amount,funds = CalculateAmountUnlocked(big.NewInt(int64(i)),funds)
-		//fmt.Println("funds --len--->",len(funds),"number",i)
+		fmt.Println("ep",time.Now().UnixNano() /1e6 - now)
 		fmp := make(map[*big.Int]interface{})
+
 		for _,v := range funds {
 			fmp[v.BlockNumber] = v
+			//fmt.Println(v)
 		}
 		//fmt.Println("fmp --len--->",len(fmp),"number",i)
 
@@ -63,6 +67,7 @@ func TestCalculateLockedFunds(t *testing.T) {
 			panic("nooooooooooooooooooooooooooooooo")
 		}
 		fmt.Println("number",i,"amount",amount,"funds",len(funds),"fmp",len(fmp))
+		fmt.Println("---------------------------------------------------------------------------------------------------------")
 		//tim := time.Now().Unix()
 		//amount,_ := CalculateAmountUnlocked(big.NewInt(int64(i)),funds)
 		////fundsBefore := len(funds)
