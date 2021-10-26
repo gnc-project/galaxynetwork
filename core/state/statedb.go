@@ -1104,6 +1104,14 @@ func (s *StateDB)GetPledgeAmount(pidAdr common.Address, addr common.Address) *bi
 	return common.Big0
 }
 
+func (s *StateDB)GetPledgeBinding(to common.Address) common.Address  {
+	stateObject := s.getStateObject(to)
+	if stateObject != nil {
+		return stateObject.Binding()
+	}
+	return common.Address{}
+}
+
 func (s *StateDB)SetPledgeAmount(pidAdr common.Address, amount *big.Int)  {
 	stateObject := s.GetOrNewStateObject(pidAdr)
 	if stateObject != nil {
@@ -1179,8 +1187,6 @@ func (s *StateDB) SubCanRedeem(addr common.Address,canRedeemList common.CanRedee
 	}
 }
 
-
-
 func (s *StateDB) GetCanRedeem(addr common.Address) common.CanRedeemList {
 	stateObject := s.getStateObject(addr)
 	if stateObject != nil {
@@ -1196,13 +1202,6 @@ func (s *StateDB) GetRedeemAmount(addr common.Address,number uint64) *big.Int{
 		return stateObject.GetRedeemAmount(number)
 	}
 	return common.Big0
-}
-
-func (s *StateDB) AddStakingList(addr common.Address,addStaking *common.Staking) {
-	stateObject := s.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.AddStakingList(addStaking)
-	}
 }
 
 func (s *StateDB) SetStakingList(addr common.Address, stakingList common.StakingList)  {

@@ -384,6 +384,12 @@ func (ec *Client) GetPledgeAmountTo(ctx context.Context,from,to common.Address,b
 	return (*big.Int)(&result), err
 }
 
+func (ec *Client) GetBinding(ctx context.Context,to common.Address,blockNumber *big.Int) (string, error) {
+	var result string
+	err := ec.c.CallContext(ctx, &result, "eth_getBinding",to,toBlockNumArg(blockNumber))
+	return result, err
+}
+
 
 func (ec *Client) GetCanRedeemList(ctx context.Context, account common.Address,blockNumber *big.Int) (common.CanRedeemList, error) {
 	var result common.CanRedeemList

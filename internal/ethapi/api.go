@@ -65,7 +65,6 @@ type PublicEthereumAPI struct {
 
 //poc
 func (b *PublicEthereumAPI) AddPlot(ctx context.Context, pid string, proof string, k int ,difficulty *big.Int, number *big.Int,timestamp int64) (map[string]interface{}, error) {
-
 	id := common.HexToHash(pid)
 
 	pro, err := hexutil.Decode(proof)
@@ -730,6 +729,14 @@ func (s *PublicBlockChainAPI) GetPledgeAmountTo(ctx context.Context,from,to comm
 	return (*hexutil.Big)(state.GetPledgeAmount(to,from)),state.Error()
 }
 
+func (s *PublicBlockChainAPI) GetBinding(ctx context.Context,to common.Address, blockNrOrHash rpc.BlockNumberOrHash) (string, error)  {
+	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	if state == nil || err != nil {
+		return "", err
+	}
+	return state.GetPledgeBinding(to).Hex(),state.Error()
+}
+
 func (s *PublicBlockChainAPI) GetTotalCapacity(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
@@ -853,7 +860,6 @@ func (s *PublicBlockChainAPI) GetTotalLockedAmount(ctx context.Context,address c
 	if state == nil || err != nil {
 		return nil, err
 	}
-
 	amountUnlocked,_ := ethash.CalculateAmountUnlocked(new(big.Int).SetUint64(math.MaxInt64),state.GetFunds(address))
 	return (*hexutil.Big)(amountUnlocked), state.Error()
 }
@@ -1282,7 +1288,7 @@ func DoEstimateGas(ctx context.Context, b Backend, args TransactionArgs, blockNr
 		available := new(big.Int).Set(balance)
 		if args.Value != nil {
 
-			switch hex.EncodeToString(args.data()) {
+			switch strings.ToLower(hex.EncodeToString(args.data())) {
 			case transfertype.Pledge:
 				if state.VerifyPid(*args.To,*args.From) {
 					return 0,fmt.Errorf("%w: address %v",transfertype.ErrDuplicatePledgedPid,*args.To)

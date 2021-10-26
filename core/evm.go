@@ -19,6 +19,7 @@ package core
 import (
 	"github.com/gnc-project/galaxynetwork/consensus/ethash"
 	"math/big"
+	"sort"
 
 	"github.com/gnc-project/galaxynetwork/common"
 	"github.com/gnc-project/galaxynetwork/consensus"
@@ -169,15 +170,21 @@ func RedeemTransfer(db vm.StateDB, sender common.Address,number *big.Int){
 	CanRedeemList := db.GetCanRedeem(sender)
 
 	amount := big.NewInt(0)
-	newRedeemList := common.CanRedeemList{}
+	newCanRedeemList := common.CanRedeemList{}
+
 	for _,canRedeem := range CanRedeemList{
 		if canRedeem.UnlockBlock <= number.Uint64() {
 			amount.Add(amount,canRedeem.RedeemAmount)
 		}else {
-			newRedeemList = append(newRedeemList, canRedeem)
+			newCanRedeemList = append(newCanRedeemList, canRedeem)
 		}
 	}
-	db.SubCanRedeem(sender,newRedeemList)
+
+	sort.SliceStable(newCanRedeemList, func(first, second int) bool  {
+		return newCanRedeemList[first].Index.Cmp(newCanRedeemList[second].Index) < 0
+	})
+
+	db.SubCanRedeem(sender,newCanRedeemList)
 	db.AddBalance(sender,amount)
 }
 
@@ -190,8 +197,24 @@ func UnlockRewardTransfer(db vm.StateDB, sender common.Address, number *big.Int)
 }
 
 func StakingTransfer(db vm.StateDB, sender common.Address, amount *big.Int,frozenPeriod *big.Int,number *big.Int){
+
 	staking := &common.Staking{Account: sender, FrozenPeriod: frozenPeriod.Uint64(), Value: amount,
 		StartNumber: number.Uint64(),StopNumber: number.Uint64() + frozenPeriod.Uint64() * rewardc.DayBlock}
+
 	db.SubBalance(sender, amount)
-	db.AddStakingList(common.AllStakingDB,staking)
+
+	stakingList := db.GetAllStakingList(common.AllStakingDB)
+
+	if len(stakingList) > 0 {
+		index := stakingList[len(stakingList)-1].Index
+		staking.Index = new(big.Int).Add(index,big.NewInt(1))
+	}else {
+		staking.Index = big.NewInt(0)
+	}
+
+	newStakingList := common.StakingList{}
+	newStakingList = append(newStakingList, stakingList...)
+	newStakingList = append(newStakingList, staking)
+
+	db.SetStakingList(common.AllStakingDB,newStakingList)
 }

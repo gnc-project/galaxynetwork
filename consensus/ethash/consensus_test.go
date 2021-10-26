@@ -27,7 +27,6 @@ import (
 	"math/big"
 	"math/rand"
 	"testing"
-	"time"
 )
 
 type diffTest struct {
@@ -45,57 +44,21 @@ func TestLockedRewardFromReward(t *testing.T)  {
 }
 
 func TestCalculateLockedFunds(t *testing.T) {
-
 	funds := common.MinedBlocks{}
 	reawrd := new(big.Int).Mul(big.NewInt(360),big.NewInt(1e18))
 	amount := big.NewInt(0)
 	total := big.NewInt(0)
-	for i:=1; i<= 21;i++ {
+	for i:=1; i<= 113850;i++ {
 
-		now := time.Now().UnixNano()/1e6
-		if i < 12 {
-			funds = CalculateLockedFunds(big.NewInt(int64(i)),reawrd,funds)
-		}
+		funds = CalculateLockedFunds(big.NewInt(int64(i)),reawrd,funds)
 		amount,funds = CalculateAmountUnlocked(big.NewInt(int64(i)),funds)
-		fmt.Println("ep",time.Now().UnixNano() /1e6 - now)
-		fmp := make(map[*big.Int]interface{})
-		for _,v := range funds {
-			fmp[v.BlockNumber] = v
-			//fmt.Println(v)
-		}
-		if len(funds) != len(fmp) {
-			panic("nooooooooooooooooooooooooooooooo")
-		}
+		lockedAmount,_ := CalculateAmountUnlocked(big.NewInt(math.MaxInt64),funds)
+
+
 		total = new(big.Int).Add(total,amount)
-		fmt.Println("number",i,"amount",amount,"funds",len(funds),"fmp",len(fmp),"total",total)
+		fmt.Println("number",i,"amount",amount,"funds",len(funds),"total",total,"lockedAmount",lockedAmount)
 		fmt.Println("---------------------------------------------------------------------------------------------------------")
-
-		//fmt.Println("fmp --len--->",len(fmp),"number",i)
-
-		//tim := time.Now().Unix()
-		//amount,_ := CalculateAmountUnlocked(big.NewInt(int64(i)),funds)
-		////fundsBefore := len(funds)
-		//for k,v := range funds {
-		//	if v.BlockNumber.Cmp(big.NewInt(int64(i))) > 0 {
-		//		funds = funds[k:]
-		//		//fmt.Printf("blockNumber=%v  k=%v  fundsAfter=%v fundsBefore=%v \n",v.BlockNumber,k, len(funds),fundsBefore)
-		//		break
-		//	}
-		//}
-		//fmt.Println(time.Now().Unix()-tim)
-		//
-		//fmt.Println("amount ---",amount,"funds len-->", len(funds))
 	}
-
-
-
-
-	//
-	//funds = CalculateLockedFunds(big.NewInt(3),big.NewInt(600 *1e8),spec,funds)
-	//fmt.Println(len(funds))
-	//
-	//funds = CalculateLockedFunds(big.NewInt(4),big.NewInt(600 *1e8),spec,funds)
-	//fmt.Println(len(funds))
 }
 
 func TestCalcNextChallenge(t *testing.T) {

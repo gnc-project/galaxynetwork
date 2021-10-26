@@ -341,7 +341,7 @@ func (l *txList) Filter(costLimit *big.Int,from common.Address,pool *TxPool,gasL
 
 	// Filter out all the transactions above the account's funds
 	removed := l.txs.Filter(func(tx *types.Transaction) bool {
-		switch hex.EncodeToString(tx.Data()) {
+		switch strings.ToLower(hex.EncodeToString(tx.Data())) {
 		case transfertype.Pledge:
 			if pool.currentState.VerifyPid(*tx.To(),from) {
 				return true

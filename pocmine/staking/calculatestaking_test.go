@@ -17,6 +17,7 @@ func TestCalculateStaking(t *testing.T) {
 	staking1.FrozenPeriod = 90
 	staking1.StopNumber = 90
 	staking1.Value =  new(big.Int).Mul(big.NewInt(1000),big.NewInt(1e18))
+	staking1.Index = big.NewInt(1)
 
 
 	staking2 := common.Staking{}
@@ -25,7 +26,7 @@ func TestCalculateStaking(t *testing.T) {
 	staking2.FrozenPeriod = 180
 	staking2.StopNumber = 180
 	staking2.Value = new(big.Int).Mul(big.NewInt(1000),big.NewInt(1e18))
-
+	staking2.Index = big.NewInt(2)
 
 	staking3 := common.Staking{}
 	staking3.StartNumber = 1
@@ -33,6 +34,7 @@ func TestCalculateStaking(t *testing.T) {
 	staking3.FrozenPeriod = 360
 	staking3.StopNumber = 360
 	staking3.Value = new(big.Int).Mul(big.NewInt(1000),big.NewInt(1e18))
+	staking3.Index = big.NewInt(3)
 
 
 	staking4 := common.Staking{}
@@ -41,6 +43,7 @@ func TestCalculateStaking(t *testing.T) {
 	staking4.FrozenPeriod = 1080
 	staking4.StopNumber = 1080
 	staking4.Value = new(big.Int).Mul(big.NewInt(1000),big.NewInt(1e18))
+	staking4.Index = big.NewInt(4)
 
 
 	staking41 := common.Staking{}
@@ -49,13 +52,15 @@ func TestCalculateStaking(t *testing.T) {
 	staking41.FrozenPeriod = 1080
 	staking41.StopNumber = 1080
 	staking41.Value = new(big.Int).Mul(big.NewInt(1000),big.NewInt(1e18))
+	staking41.Index = big.NewInt(5)
 
 	list := common.StakingList{}
 
-	list = append(list, &staking1)
 	list = append(list, &staking2)
-	list = append(list, &staking3)
 	list = append(list, &staking4)
+	list = append(list, &staking1)
+	list = append(list, &staking3)
+
 	//list = append(list, &staking41)
 
 	re := new(big.Int).Mul(big.NewInt(600),big.NewInt(1e18))
@@ -68,8 +73,13 @@ func TestCalculateStaking(t *testing.T) {
 	}
 	fmt.Println("----------------------------")
 	for _,v := range newStakingList {
-		fmt.Println(*v)
+		fmt.Println("--newStakingList---sort-->",*v)
 	}
+
+	for _,v := range list {
+		fmt.Println("--list---sort-->",*v)
+	}
+
 	fmt.Println("----------------------------")
 	fmt.Printf("free=%v newStakingListLen=%d rewardStakinglen=%d \n",accFree, len(newStakingList), len(rewardStaking))
 

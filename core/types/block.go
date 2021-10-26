@@ -26,6 +26,7 @@ import (
 	"io"
 	"math/big"
 	"reflect"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -216,7 +217,7 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 	b.header.NetCapacity = header.ParentCapacity
 
 	for _,v := range txs {
-		switch hex.EncodeToString(v.Data()) {
+		switch strings.ToLower(hex.EncodeToString(v.Data())) {
 		case transfertype.Pledge:
 			b.header.NetCapacity = b.header.NetCapacity + rewardc.BaseCapacity
 		case transfertype.DelPid:

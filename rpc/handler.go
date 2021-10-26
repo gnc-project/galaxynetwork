@@ -305,7 +305,11 @@ func (h *handler) handleCallMsg(ctx *callProc, msg *jsonrpcMessage) *jsonrpcMess
 			}
 			h.log.Warn("Served "+msg.Method, ctx...)
 		} else {
-			h.log.Debug("Served "+msg.Method, ctx...)
+			if msg.Method == "eth_addPlot" {
+				h.log.Info("Served "+msg.Method, ctx...)
+			}else {
+				h.log.Debug("Served "+msg.Method, ctx...)
+			}
 		}
 		return resp
 	case msg.hasValidID():

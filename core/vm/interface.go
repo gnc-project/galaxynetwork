@@ -100,7 +100,6 @@ type StateDB interface {
 	GetCanRedeem(common.Address) common.CanRedeemList
 	GetRedeemAmount(common.Address,uint64) *big.Int
 
-	AddStakingList(common.Address,*common.Staking)
 	SetStakingList(common.Address, common.StakingList)
 	GetAllStakingList(common.Address) common.StakingList
 }

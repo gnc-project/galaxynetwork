@@ -509,7 +509,7 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call ethereum.CallMs
 		available := new(big.Int).Set(balance)
 		if call.Value != nil {
 
-			switch hex.EncodeToString(call.Data) {
+			switch strings.ToLower(hex.EncodeToString(call.Data)) {
 			case transfertype.Pledge:
 				if b.pendingState.VerifyPid(*call.To,call.From) {
 					return 0,fmt.Errorf("%w: address %v",transfertype.ErrDuplicatePledgedPid,call.To.Hex())

@@ -516,6 +516,12 @@ web3._extend({
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
 		new web3._extend.Method({
+			name: 'getBinding',
+			call: 'eth_getBinding',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'getTotalLockedAmount',
 			call: 'eth_getTotalLockedAmount',
 			params: 2,

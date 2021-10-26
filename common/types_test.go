@@ -18,7 +18,9 @@ package common
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"database/sql/driver"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -26,6 +28,29 @@ import (
 	"strings"
 	"testing"
 )
+
+func TestAddress_Hash(t *testing.T) {
+	cr := CanRedeemList{}
+	r := CanRedeem{}
+
+	r.RedeemAmount = big.NewInt(100)
+	r.UnlockBlock = 500
+	cr = append(cr, &r)
+
+	r2 := CanRedeem{}
+	r2.RedeemAmount = big.NewInt(200)
+	r2.UnlockBlock = 500
+	cr = append(cr, &r2)
+
+
+
+	j,err := json.Marshal(cr)
+	if err != nil {
+		panic(err)
+	}
+	h := sha256.Sum256(j)
+	fmt.Println(hex.EncodeToString(h[:]))
+}
 
 func TestBytesConversion(t *testing.T) {
 	bytes := []byte{5}

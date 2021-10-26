@@ -52,9 +52,10 @@ var (
 type Hash [HashLength]byte
 
 type Staking struct {
+	Index     	 *big.Int
 	Account	  	 Address
-	StartNumber	uint64
-	StopNumber  uint64
+	StartNumber	 uint64
+	StopNumber   uint64
 	FrozenPeriod uint64
 	Value        *big.Int
 }
@@ -76,6 +77,7 @@ type StakingResult struct {
 type StakingWeightList []*StakingWeight
 
 type CanRedeem struct {
+	Index 		*big.Int
 	UnlockBlock  uint64
 	RedeemAmount *big.Int
 }

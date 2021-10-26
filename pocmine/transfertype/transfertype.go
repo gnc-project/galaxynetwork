@@ -4,16 +4,17 @@ import (
 	"encoding/hex"
 	"errors"
 	"math/big"
+	"strings"
 )
 
 var (
-	Pledge = hex.EncodeToString([]byte("pledge"))
-	Staking = hex.EncodeToString([]byte("staking"))
+	Pledge = strings.ToLower(hex.EncodeToString([]byte("pledge")))
+	Staking = strings.ToLower(hex.EncodeToString([]byte("staking")))
 
 
-	Redeem = hex.EncodeToString([]byte("redeem"))
-	DelPid = hex.EncodeToString([]byte("delPid"))
-	UnlockReward = hex.EncodeToString([]byte("unlockReward"))
+	Redeem = strings.ToLower(hex.EncodeToString([]byte("redeem")))
+	DelPid = strings.ToLower(hex.EncodeToString([]byte("delPid")))
+	UnlockReward = strings.ToLower(hex.EncodeToString([]byte("unlockReward")))
 )
 
 var (

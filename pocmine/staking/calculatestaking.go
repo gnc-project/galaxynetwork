@@ -12,6 +12,7 @@ func CalculateStaking(list common.StakingList,number uint64,reward decimal.Decim
 	newStakingList := common.StakingList{}
 	stakingMap := make(map[string]*common.StakingWeight)
 	accFree := make(map[string]*big.Int)
+
 	for _,v := range list{
 		if v.StopNumber > number {
 
@@ -34,14 +35,9 @@ func CalculateStaking(list common.StakingList,number uint64,reward decimal.Decim
 			}
 		}
 	}
+
 	sort.SliceStable(newStakingList, func(i, j int) bool {
-		if newStakingList[i].StartNumber < newStakingList[j].StartNumber {
-			return true
-		}
-		if newStakingList[i].Account.Hash().Big().Cmp(newStakingList[j].Account.Hash().Big()) > 0 {
-			return true
-		}
-		return false
+		return newStakingList[i].Index.Cmp(newStakingList[j].Index) < 0
 	})
 
 

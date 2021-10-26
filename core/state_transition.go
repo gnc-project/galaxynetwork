@@ -209,7 +209,7 @@ func (st *StateTransition) buyGas() error {
 		balanceCheck.Add(balanceCheck, st.value)
 	}
 
-	switch hex.EncodeToString(st.msg.Data()) {
+	switch strings.ToLower(hex.EncodeToString(st.msg.Data())) {
 	case transfertype.Pledge:
 		if have, want := st.state.GetBalance(st.msg.From()), balanceCheck; have.Cmp(want) < 0 {
 			return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
@@ -364,7 +364,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	st.gas -= gas
 
 	// Check clause 6
-	switch hex.EncodeToString(msg.Data()) {
+	switch strings.ToLower(hex.EncodeToString(msg.Data())) {
 	case transfertype.Pledge:
 		if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.From(),msg.Value()) {
 			return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())

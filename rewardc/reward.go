@@ -8,8 +8,9 @@ import (
 const (
 	POCReward              = uint64(600)
 	FutureBlockTime        = uint64(18)
-	BlockTotal             = 365 * 24 * 60 * 60 / FutureBlockTime
+	BlockTotal             = 360 * 24 * 60 * 60 / FutureBlockTime
 	subsidyHalvingInterval = BlockTotal * 2
+	Blocks				   = subsidyHalvingInterval - 5000
 
 	GenesisDifficulty      = uint64(15000000000000000) // Difficulty of the Genesis block.
 	MinimumDifficulty      = uint64(15000000000000000) // The minimum that the difficulty may ever be.
@@ -77,6 +78,7 @@ var BlockReward = big.NewInt(0).Mul(big.NewInt(0).SetUint64(POCReward), big.NewI
 
 
 func GetReward(height uint64) *big.Int {
+	height = height + Blocks
 	halvings := height / subsidyHalvingInterval
 	subsidy := POCReward
 	subsidy >>= halvings

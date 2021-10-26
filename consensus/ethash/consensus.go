@@ -548,10 +548,10 @@ func (ethash *Ethash) Finalize(chain consensus.ChainHeaderReader, header *types.
 // uncle rewards, setting the final state and assembling the block.
 func (ethash *Ethash) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	// Finalize block
-	ethash.Finalize(chain, header, state, txs, uncles)
+	ethash.Finalize(chain, header, state, txs, nil)
 
 	// Header seems complete, assemble into a block and return
-	return types.NewBlock(header, txs, uncles, receipts, trie.NewStackTrie(nil)), nil
+	return types.NewBlock(header, txs, nil, receipts, trie.NewStackTrie(nil)), nil
 }
 
 // SealHash returns the hash of a block prior to it being sealed.
@@ -800,8 +800,9 @@ func CalculateLockedFunds(num *big.Int, rewardLock *big.Int,funds common.MinedBl
 		vestEpoch = new(big.Int).Add(vestEpoch,big.NewInt(rewardc.DayBlock))
 
 		if mb, ok := fundsMap[vestEpoch.Uint64()]; ok {
-			mb.Amount = new(big.Int).Add(mb.Amount,dayAmount)
-			fundsMap[vestEpoch.Uint64()] = mb
+			amount := new(big.Int).Add(mb.Amount,dayAmount)
+			newMb := &common.MinedBlock{BlockNumber: new(big.Int).SetUint64(vestEpoch.Uint64()),Amount: amount}
+			fundsMap[vestEpoch.Uint64()] = newMb
 		}else {
 			fundsMap[vestEpoch.Uint64()] = &common.MinedBlock{BlockNumber: new(big.Int).SetUint64(vestEpoch.Uint64()),Amount: dayAmount}
 		}

@@ -636,7 +636,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
 	switch hex.EncodeToString(snapdata) {
 
-	case transfertype.Pledge:
+	case strings.ToLower(transfertype.Pledge):
 		if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
 			return ErrInsufficientFunds
 		}

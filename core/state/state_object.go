@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"sort"
 	"time"
 
 	"github.com/gnc-project/galaxynetwork/common"
@@ -132,20 +131,20 @@ func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 		data.CodeHash = emptyCodeHash
 	}
 
-	if data.PledgedAmount == nil {
-		data.PledgedAmount = new(big.Int)
+	if data.Funds == nil {
+		data.Funds = common.MinedBlocks{}
 	}
 
 	if data.CanRedeem == nil {
 		data.CanRedeem = common.CanRedeemList{}
 	}
 
-	if data.Funds == nil {
-		data.Funds = common.MinedBlocks{}
+	if data.Staking == nil {
+		data.Staking = common.StakingList{}
 	}
 
-    if data.Staking==nil{
-		data.Staking = common.StakingList{}
+	if data.PledgedAmount == nil {
+		data.PledgedAmount = new(big.Int)
 	}
 
 	if data.PledgedAmount == nil {
@@ -588,22 +587,6 @@ func (s *stateObject) GetRedeemAmount(number uint64)*big.Int{
 	return redeemBalance
 }
 
-
-func (s *stateObject) AddStakingList(addStaking *common.Staking)  {
-	stakingList := s.AllStaking()
-	stakingList = append(stakingList, addStaking)
-	sort.SliceStable(stakingList, func(i, j int) bool {
-		if stakingList[i].StartNumber < stakingList[j].StartNumber {
-			return true
-		}
-		if stakingList[i].Account.Hash().Big().Cmp(stakingList[j].Account.Hash().Big()) > 0 {
-			return true
-		}
-		return false
-	})
-	s.SetStakingList(stakingList)
-}
-
 func (s *stateObject) SetStakingList(stakingList common.StakingList)  {
 	s.db.journal.append(stakingListChange{
 		account: &s.address,
@@ -622,9 +605,19 @@ func (s *stateObject) AddCanRedeem(number uint64,amount *big.Int) {
 		UnlockBlock: number,
 		RedeemAmount: amount,
 	}
-	var canRedeemList  common.CanRedeemList
-	canRedeemList = append(s.data.CanRedeem, newCanRedeem)
-	s.SetCanRedeem(canRedeemList)
+	canRedeemList := s.CanRedeem()
+
+	if len(canRedeemList) > 0 {
+		newCanRedeem.Index = new(big.Int).Add(canRedeemList[len(canRedeemList)-1].Index,big.NewInt(1))
+	}else {
+		newCanRedeem.Index = big.NewInt(0)
+	}
+
+	var newCanRedeemList  common.CanRedeemList
+	newCanRedeemList = append(newCanRedeemList,canRedeemList...)
+	newCanRedeemList = append(newCanRedeemList,newCanRedeem)
+
+	s.SetCanRedeem(newCanRedeemList)
 }
 
 // SubCanRedeem SubBalance removes amount from s's balance.
@@ -638,11 +631,6 @@ func (s *stateObject) SetCanRedeem(newCanRedeemList common.CanRedeemList) {
 		account: &s.address,
 		prev:    s.data.CanRedeem,
 	})
-
-	sort.SliceStable(newCanRedeemList, func(first, second int)bool  {
-		return newCanRedeemList[first].UnlockBlock < newCanRedeemList[second].UnlockBlock
-	})
-
 	s.setCanRedeem(newCanRedeemList)
 }
 
@@ -780,5 +768,3 @@ func (s *stateObject) Nonce() uint64 {
 func (s *stateObject) Value() *big.Int {
 	panic("Value on stateObject should never be called")
 }
-
-var  PidHashLength=32

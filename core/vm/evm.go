@@ -227,7 +227,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		evm.StateDB.CreateAccount(addr)
 	}
 
-	switch hex.EncodeToString(input) {
+	switch strings.ToLower(hex.EncodeToString(input)) {
 		case transfertype.Pledge:
 			evm.Context.PledgeTransfer(evm.StateDB, caller.Address(), addr, value)
 		case transfertype.Redeem:
