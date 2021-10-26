@@ -41,11 +41,9 @@ func CalculateStaking(list common.StakingList,number uint64,reward decimal.Decim
 	})
 
 
-	totalWeight := decimal.Zero
 	rewardStaking := common.StakingWeightList{}
 	for _,v := range stakingMap {
 		rewardStaking = append(rewardStaking,v)
-		totalWeight = totalWeight.Add(v.Weight)
 	}
 
 	sort.SliceStable(rewardStaking, func(first, second int) bool {
@@ -61,6 +59,11 @@ func CalculateStaking(list common.StakingList,number uint64,reward decimal.Decim
 
 	if len(rewardStaking) > rewardc.StakingNum {
 		rewardStaking = rewardStaking[:rewardc.StakingNum]
+	}
+
+	totalWeight := decimal.Zero
+	for _, v := range rewardStaking {
+		totalWeight = totalWeight.Add(v.Weight)
 	}
 
 	for k,v := range rewardStaking {
