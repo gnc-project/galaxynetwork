@@ -64,7 +64,7 @@ type Genesis struct {
 	GasUsed    uint64      `json:"gasUsed"`
 	ParentHash common.Hash `json:"parentHash"`
 	NetCapacity uint64   `json:"netCapacity"`
-	ParentCapacity uint64 `json:"parent_capacity"`
+	ParentCapacity uint64 `json:"parentCapacity"`
 	BaseFee    *big.Int    `json:"baseFeePerGas"`
 
 	Challenge common.Hash `json:"challenge"               gencodec:"required"`

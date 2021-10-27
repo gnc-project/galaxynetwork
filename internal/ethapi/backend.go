@@ -94,7 +94,7 @@ type Backend interface {
 	Engine() consensus.Engine
 
 	//poc
-	AddPlot(ctx context.Context, pid common.Hash, proof []byte, k int,difficulty *big.Int, number *big.Int, timestamp int64) (*pocmine.WorkPoc, error)
+	AddPlot(ctx context.Context, pid string, proof string, k int,difficulty *big.Int, number *big.Int, challenge string, timestamp int64) (*pocmine.WorkPoc, error)
 	MinerInfo(ctx context.Context) (*poc.MinerInfo, error)
 }
 

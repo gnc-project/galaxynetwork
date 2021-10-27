@@ -18,8 +18,11 @@
 package core
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/gnc-project/galaxynetwork/common/pidaddress"
+	"github.com/gnc-project/galaxynetwork/rewardc"
 	"io"
 	"math/big"
 	mrand "math/rand"
@@ -1858,6 +1861,14 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 				}(time.Now(), followup, throwaway, &followupInterrupt)
 			}
 		}
+
+		//poc
+		if block.Header().Number.Uint64() >= rewardc.PledgeNumber {
+			if !statedb.VerifyPid(pidaddress.PIDAddress(block.Header().Coinbase,block.Header().Pid[:]),block.Header().Coinbase) {
+				return it.index, fmt.Errorf("invalid pid=%v is not pledged address=%v", hex.EncodeToString(block.Header().Pid[:]), block.Header().Coinbase.Hex())
+			}
+		}
+
 		// Process block using the parent state as reference point
 		substart := time.Now()
 		receipts, logs, usedGas, err := bc.processor.Process(block, statedb, bc.vmConfig)

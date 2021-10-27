@@ -35,6 +35,15 @@ func LinkGNC(ip string) *Client{
 	return nil
 }
 
+func TestClient_BlockByNumber(t *testing.T) {
+	client := LinkGNC("http://127.0.0.1:8545")
+	block, err := client.BlockByNumber(context.Background(),big.NewInt(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("hash---->",block.Hash())
+}
+
 func TestClient_BalanceAt(t *testing.T) {
 	client := LinkGNC("http://127.0.0.1:8545")
 	balance, err := client.BalanceAt(context.Background(),common.HexToAddress(from),nil)

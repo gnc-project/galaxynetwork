@@ -116,6 +116,7 @@ func (ethash *Ethash) VerifyHeader(chain consensus.ChainHeaderReader, header *ty
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
+
 	// Sanity checks passed, do a proper verification
 	return ethash.verifyHeader(chain, header, parent, false, seal, time.Now().Unix())
 }

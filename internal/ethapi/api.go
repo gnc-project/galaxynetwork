@@ -64,15 +64,10 @@ type PublicEthereumAPI struct {
 }
 
 //poc
-func (b *PublicEthereumAPI) AddPlot(ctx context.Context, pid string, proof string, k int ,difficulty *big.Int, number *big.Int,timestamp int64) (map[string]interface{}, error) {
-	id := common.HexToHash(pid)
+func (b *PublicEthereumAPI) AddPlot(ctx context.Context, pid string, proof string, k int ,difficulty *big.Int, number *big.Int,challenge string,timestamp int64) (map[string]interface{}, error) {
 
-	pro, err := hexutil.Decode(proof)
-	if err != nil {
-		return nil, err
-	}
 
-	workPoc, err := b.b.AddPlot(ctx, id,pro,k,difficulty, number,timestamp)
+	workPoc, err := b.b.AddPlot(ctx, pid,proof,k,difficulty,number,challenge,timestamp)
 	if workPoc == nil || err != nil {
 		return nil, err
 	}

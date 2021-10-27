@@ -95,7 +95,7 @@ type Header struct {
 	Signed	  []byte			`json:"signed"           gencodec:"required"`
 
 	NetCapacity uint64         `json:"netCapacity"     gencodec:"required"`
-	ParentCapacity uint64	   `json:"parent_capacity" gencodec:"required"`
+	ParentCapacity uint64	   `json:"parentCapacity"  gencodec:"required"`
 
 	MixDigest   common.Hash    `json:"mixHash"`
 	Nonce       BlockNonce     `json:"nonce"`

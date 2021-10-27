@@ -45,10 +45,10 @@ func TestLockedRewardFromReward(t *testing.T)  {
 
 func TestCalculateLockedFunds(t *testing.T) {
 	funds := common.MinedBlocks{}
-	reawrd := new(big.Int).Mul(big.NewInt(360),big.NewInt(1e18))
+	reawrd := new(big.Int).Mul(big.NewInt(180),big.NewInt(1e18))
 	amount := big.NewInt(0)
 	total := big.NewInt(0)
-	for i:=1; i<= 113850;i++ {
+	for i:=1; i<= 19;i++ {
 
 		funds = CalculateLockedFunds(big.NewInt(int64(i)),reawrd,funds)
 		amount,funds = CalculateAmountUnlocked(big.NewInt(int64(i)),funds)

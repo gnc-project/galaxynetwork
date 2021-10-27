@@ -35,7 +35,7 @@ func (h Header) MarshalJSON() ([]byte, error) {
 		Proof          hexutil.Bytes  `json:"proof"            gencodec:"required"`
 		Signed         hexutil.Bytes  `json:"signed"           gencodec:"required"`
 		NetCapacity    hexutil.Uint64 `json:"netCapacity"     gencodec:"required"`
-		ParentCapacity hexutil.Uint64 `json:"parent_capacity" gencodec:"required"`
+		ParentCapacity hexutil.Uint64 `json:"parentCapacity"  gencodec:"required"`
 		MixDigest      common.Hash    `json:"mixHash"`
 		Nonce          BlockNonce     `json:"nonce"`
 		BaseFee        *hexutil.Big   `json:"baseFeePerGas" rlp:"optional"`
@@ -91,7 +91,7 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		Proof          *hexutil.Bytes  `json:"proof"            gencodec:"required"`
 		Signed         *hexutil.Bytes  `json:"signed"           gencodec:"required"`
 		NetCapacity    *hexutil.Uint64 `json:"netCapacity"     gencodec:"required"`
-		ParentCapacity *hexutil.Uint64 `json:"parent_capacity" gencodec:"required"`
+		ParentCapacity *hexutil.Uint64 `json:"parentCapacity"  gencodec:"required"`
 		MixDigest      *common.Hash    `json:"mixHash"`
 		Nonce          *BlockNonce     `json:"nonce"`
 		BaseFee        *hexutil.Big    `json:"baseFeePerGas" rlp:"optional"`
@@ -177,7 +177,7 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 	}
 	h.NetCapacity = uint64(*dec.NetCapacity)
 	if dec.ParentCapacity == nil {
-		return errors.New("missing required field 'parent_capacity' for Header")
+		return errors.New("missing required field 'parentCapacity' for Header")
 	}
 	h.ParentCapacity = uint64(*dec.ParentCapacity)
 	if dec.MixDigest != nil {

@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/gnc-project/galaxynetwork/common/hexutil"
 	"github.com/gnc-project/galaxynetwork/common/pidaddress"
 	"github.com/gnc-project/galaxynetwork/consensus/ethash"
 	"github.com/gnc-project/galaxynetwork/log"
@@ -27,6 +28,7 @@ import (
 	"github.com/gnc-project/galaxynetwork/rewardc"
 	"github.com/gnc-project/poc"
 	"math/big"
+	"strings"
 
 	"github.com/gnc-project/galaxynetwork/accounts"
 	"github.com/gnc-project/galaxynetwork/common"
@@ -55,30 +57,40 @@ type EthAPIBackend struct {
 }
 
 //poc
-func (b *EthAPIBackend) AddPlot(ctx context.Context, pid common.Hash, proof []byte, k int,difficulty *big.Int, number *big.Int, timestamp int64) (*pocmine.WorkPoc, error) {
+func (b *EthAPIBackend) AddPlot(ctx context.Context, pid string, proof string, k int,difficulty *big.Int, number *big.Int, challenge string, timestamp int64) (*pocmine.WorkPoc, error) {
 
 	if pocmine.OwnerCoin == nil {
 		return nil, errors.New("miner is not start")
 	}
 
-	currenHeader := b.eth.blockchain.CurrentHeader()
-	commitNumber := big.NewInt(0).Add(currenHeader.Number, common.Big1)
+	id := common.HexToHash(pid)
 
-	if commitNumber.Cmp(number) != 0 {
-		log.Info(fmt.Errorf("not the current commitNumber=%v, number=%v", commitNumber, number).Error())
-		return nil,fmt.Errorf("not the current commitNumber=%v, number=%v", commitNumber, number)
+	pro, err := hexutil.Decode(proof)
+	if err != nil {
+		return nil, err
 	}
 
 	minerInfo,err := b.MinerInfo(ctx)
 	if err != nil {
 		return nil, err
 	}
-	bestQua, err := poc.VerifiedQuality(proof,pid,common.HexToHash(minerInfo.Challenge),minerInfo.LastBlockTime/poc.PoCSlot,minerInfo.Number,uint64(k))
+
+	if minerInfo.Number != number.Uint64() {
+		log.Info(fmt.Errorf("not the current commitNumber=%d, number=%d", minerInfo.Number, number).Error())
+		return nil,fmt.Errorf("not the current commitNumber=%d, number=%d", minerInfo.Number, number)
+	}
+
+	if !strings.EqualFold(minerInfo.Challenge,"0x"+challenge) {
+		log.Info(fmt.Errorf("not the current challenge=%d, number=%d", minerInfo.Number, number).Error())
+		return nil,fmt.Errorf("not the current challenge=%d, number=%d", minerInfo.Number, number)
+	}
+
+	bestQua, err := poc.VerifiedQuality(pro,id,common.HexToHash(minerInfo.Challenge),minerInfo.LastBlockTime/poc.PoCSlot,minerInfo.Number,uint64(k))
 	if err != nil {
 		log.Error("poc verifiedQuality err","pro",proof,"pid",pid,"k",k,"difficulty",difficulty,"commitNumber",number,"timestamp",timestamp,"bestQua",bestQua,
 			"challenge",minerInfo.Challenge,"minerNumber",minerInfo.Number,"lastBlockTime",minerInfo.LastBlockTime,"minerDifficulty",minerInfo.Difficulty,
 			"err",err)
-		return nil, err
+		return nil, fmt.Errorf("poc verifiedQuality pid=%s proof=%s number=%d",pid,proof,number.Uint64())
 	}
 
 	statedb, err := b.eth.blockchain.State()
@@ -87,12 +99,12 @@ func (b *EthAPIBackend) AddPlot(ctx context.Context, pid common.Hash, proof []by
 	}
 
 	if number.Uint64() >= rewardc.PledgeNumber {
-		if !statedb.VerifyPid(pidaddress.PIDAddress(b.eth.etherbase,pid[:]), b.eth.etherbase) {
-			return nil, fmt.Errorf("invalid pid=%v is not pledged address=%v", pid.Hex(), b.eth.etherbase.Hex())
+		if !statedb.VerifyPid(pidaddress.PIDAddress(b.eth.etherbase,id[:]), b.eth.etherbase) {
+			return nil, fmt.Errorf("invalid pid=%v is not pledged address=%v number=%d", id, b.eth.etherbase.Hex(),number.Uint64())
 		}
 	}
 
-	newWork := pocmine.NewWorkPoc(pid,proof,uint8(k),difficulty, number, timestamp)
+	newWork := pocmine.NewWorkPoc(id,pro,uint8(k),difficulty, number, timestamp)
 
 	generate := pocmine.GetGenerator()
 

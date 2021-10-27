@@ -49,7 +49,7 @@ type LesApiBackend struct {
 }
 
 //poc
-func (b *LesApiBackend) AddPlot(ctx context.Context, pid common.Hash, proof []byte, k int,difficulty *big.Int, number *big.Int, timestamp int64) (*pocmine.WorkPoc, error) {
+func (b *LesApiBackend) AddPlot(ctx context.Context, pid string, proof string, k int,difficulty *big.Int, number *big.Int, challenge string, timestamp int64) (*pocmine.WorkPoc, error) {
 	return nil, nil
 }
 

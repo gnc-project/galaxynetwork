@@ -31,7 +31,7 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 		GasUsed        math.HexOrDecimal64                         `json:"gasUsed"`
 		ParentHash     common.Hash                                 `json:"parentHash"`
 		NetCapacity    math.HexOrDecimal64                         `json:"netCapacity"`
-		ParentCapacity math.HexOrDecimal64                         `json:"parent_capacity"`
+		ParentCapacity math.HexOrDecimal64                         `json:"parentCapacity"`
 		BaseFee        *math.HexOrDecimal256                       `json:"baseFeePerGas"`
 		Challenge      common.Hash                                 `json:"challenge"               gencodec:"required"`
 	}
@@ -76,7 +76,7 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 		GasUsed        *math.HexOrDecimal64                        `json:"gasUsed"`
 		ParentHash     *common.Hash                                `json:"parentHash"`
 		NetCapacity    *math.HexOrDecimal64                        `json:"netCapacity"`
-		ParentCapacity *math.HexOrDecimal64                        `json:"parent_capacity"`
+		ParentCapacity *math.HexOrDecimal64                        `json:"parentCapacity"`
 		BaseFee        *math.HexOrDecimal256                       `json:"baseFeePerGas"`
 		Challenge      *common.Hash                                `json:"challenge"               gencodec:"required"`
 	}

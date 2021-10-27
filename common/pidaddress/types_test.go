@@ -8,6 +8,6 @@ import (
 )
 
 func TestPIDAddress(t *testing.T) {
-	ads := PIDAddress(common.HexToAddress("0x34669E11808f1879929203092CA3093319221068"),hexutil.MustDecode("0x4317d8d4acf66277e98590a11901ec6ba6851b641e5754d816667aab9ba670e6"))
+	ads := PIDAddress(common.HexToAddress("0xccFD71131015d9dcDDf3f2e97B0aA7bE11E1bF5F"),hexutil.MustDecode("0x74865a286121cc902608ab5646a50d8e77eceacfc45ea101d418cbd48574f7fb"))
 	fmt.Println(ads.Hex())
 }

@@ -17,16 +17,13 @@
 package core
 
 import (
-	"encoding/hex"
 	"fmt"
-	"github.com/gnc-project/galaxynetwork/common/pidaddress"
 	"time"
 
 	"github.com/gnc-project/galaxynetwork/consensus"
 	"github.com/gnc-project/galaxynetwork/core/state"
 	"github.com/gnc-project/galaxynetwork/core/types"
 	"github.com/gnc-project/galaxynetwork/params"
-	"github.com/gnc-project/galaxynetwork/rewardc"
 	"github.com/gnc-project/galaxynetwork/trie"
 )
 
@@ -84,13 +81,6 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 // otherwise nil and an error is returned.
 func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateDB, receipts types.Receipts, usedGas uint64) error {
 	header := block.Header()
-	//poc
-	if header.Number.Uint64() >= rewardc.PledgeNumber {
-		if !statedb.VerifyPid(pidaddress.PIDAddress(header.Coinbase,header.Pid[:]),header.Coinbase) {
-			return fmt.Errorf("invalid pid=%v is not pledged address=%v", hex.EncodeToString(header.Pid[:]), header.Coinbase.Hex())
-		}
-	}
-
 	if block.GasUsed() != usedGas {
 		return fmt.Errorf("invalid gas used (remote: %d local: %d)", block.GasUsed(), usedGas)
 	}
