@@ -313,7 +313,6 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 		return consensus.ErrInvalidNumber
 	}
 	// Verify the engine specific seal securing the block
-
 	//poc
 	if err := ethash.verifyPoc(header,parent);err != nil {
 		return err
@@ -667,7 +666,7 @@ func (ethhash *Ethash) verifySig(header *types.Header) error {
 
 func (ethhash *Ethash)verifyHeaderTimestamp(header,parent *types.Header) error {
 
-	if int64(header.Time) > time.Now().Unix() {
+	if int64(header.Time) > time.Now().Unix() + 3 {
 		log.Error("block timestamp of unix is too far in the future",
 			"allowed",      time.Now().Unix(),
 			"timestamp_unix", header.Time,
