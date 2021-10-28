@@ -385,21 +385,23 @@ func (l *txList) Filter(costLimit *big.Int,from common.Address,pool *TxPool,gasL
 		}
 	})
 
-	if len(removed) == 0 {
-		return nil, nil
-	}
 	var invalids types.Transactions
 	// If the list was strict, filter anything above the lowest nonce
-	if l.strict {
-		lowest := uint64(math.MaxUint64)
-		for _, tx := range removed {
-			if nonce := tx.Nonce(); lowest > nonce {
-				lowest = nonce
-			}
+	//if l.strict || true {
+	lowest := uint64(math.MaxUint64)
+	for _, tx := range removed {
+		if nonce := tx.Nonce(); lowest > nonce {
+			lowest = nonce
 		}
-		invalids = l.txs.filter(func(tx *types.Transaction) bool { return tx.Nonce() > lowest })
 	}
+	invalids = l.txs.filter(func(tx *types.Transaction) bool { return tx.Nonce() > lowest })
+	//}
 	l.txs.reheap()
+
+	if len(removed) == 0 {
+		return nil, invalids
+	}
+
 	return removed, invalids
 }
 
