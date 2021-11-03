@@ -74,7 +74,7 @@ them using your favourite package manager. Once the dependencies are installed, 
 
 ```shell
 make geth
-./geth --http.api='eth,web3,net,debug' --http.port=8545 --ethash.dagdir ./dag  --gcmode archive
+./geth --http.api='eth,web3,net,debug' --http.port=8545 --gcmode archive
 ```
 
 or, to build the full suite of utilities:
