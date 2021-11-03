@@ -47,7 +47,6 @@ func GeneralTransaction(client *Client,privateKeyString string,toString string,v
 
 	}
 	gasPrice,_:=client.SuggestGasPrice(context.Background())
-
 	tx := types.NewTransaction(nonce, *msg.To,msg.Value,gas,gasPrice, msg.Data)
 	chainID,_:=client.ChainID(context.Background())
 	//Sign transaction 

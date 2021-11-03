@@ -17,20 +17,21 @@ geth:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/geth\" to launch geth."
 
+
 gnc:
 	$(GORUN) build/ci.go install ./cmd/geth
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/geth\" to launch geth."
-	@./build/bin/geth --datadir=/nvme/data/geth1/ --syncmode 'full' --cache 1024 --rpc  --rpcaddr='0.0.0.0' --rpcapi='eth,web3,net,debug' --rpcport=8545 --ethash.dagdir ./dag --gcmode archive --snapshot
+	@./build/bin/geth --datadir=/nvme/data/geth1/ --syncmode 'full' --cache 1024 --rpc  --http.addr='0.0.0.0' --http.api='eth,web3,net,debug' --http.port=8545 --ethash.dagdir ./dag  --gcmode archive --snapshot
 
 gnc1:
 	@md5sum build/bin/geth
 	@rm -rf /nvme/data/geth1/*
-	$(GORUN) build/ci.go install ./cmd/geth
+	$(GORUN) build/ci.go install  ./cmd/geth
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/geth\" to launch geth."
 	@md5sum build/bin/geth
-	@./build/bin/geth --datadir=/nvme/data/geth1/ --syncmode 'full' --cache 1024 --rpc  --rpcaddr='0.0.0.0' --rpcapi='eth,web3,net,debug' --rpcport=8545 --ethash.dagdir ./dag --gcmode archive --snapshot
+	@./build/bin/geth --datadir=/nvme/data/geth1/ --syncmode 'light' --cache 1024 --rpc  --http.addr='0.0.0.0' --http.addr='eth,web3,net,debug' --http.addr=8545 --ethash.dagdir ./dag --gcmode archive --snapshot
 
 all:
 	$(GORUN) build/ci.go install

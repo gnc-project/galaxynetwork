@@ -10,7 +10,7 @@ const (
 	FutureBlockTime        = uint64(18)
 	BlockTotal             = 360 * 24 * 60 * 60 / FutureBlockTime
 	subsidyHalvingInterval = BlockTotal * 2
-	Blocks				   = subsidyHalvingInterval - 5000
+	Blocks				   = subsidyHalvingInterval - 576000
 
 	GenesisDifficulty      = uint64(20000000000000000) // Difficulty of the Genesis block.
 	MinimumDifficulty      = uint64(20000000000000000) // The minimum that the difficulty may ever be.

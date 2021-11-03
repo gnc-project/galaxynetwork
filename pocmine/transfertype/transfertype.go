@@ -35,11 +35,11 @@ var (
 func CalculatePledgeAmount(currentNetCapacity uint64) *big.Int {
 	currentNetCapacity = currentNetCapacity / 1024 / 1024
 	switch  {
-	case currentNetCapacity < 1:
+	case currentNetCapacity < 100:
 		return new(big.Int).Mul(big.NewInt(56250),big.NewInt(1e+15))
-	case currentNetCapacity < 2:
+	case currentNetCapacity < 200:
 		return new(big.Int).Mul(big.NewInt(49219),big.NewInt(1e+15))
-	case currentNetCapacity < 3:
+	case currentNetCapacity < 300:
 		return new(big.Int).Mul(big.NewInt(42188),big.NewInt(1e+15))
 	case currentNetCapacity < 4:
 		return new(big.Int).Mul(big.NewInt(31641),big.NewInt(1e+15))

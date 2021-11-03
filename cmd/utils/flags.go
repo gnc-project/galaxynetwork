@@ -33,6 +33,7 @@ import (
 	"text/template"
 	"time"
 
+	pcsclite "github.com/gballet/go-libpcsclite"
 	"github.com/gnc-project/galaxynetwork/accounts"
 	"github.com/gnc-project/galaxynetwork/accounts/keystore"
 	"github.com/gnc-project/galaxynetwork/common"
@@ -66,7 +67,6 @@ import (
 	"github.com/gnc-project/galaxynetwork/p2p/nat"
 	"github.com/gnc-project/galaxynetwork/p2p/netutil"
 	"github.com/gnc-project/galaxynetwork/params"
-	pcsclite "github.com/gballet/go-libpcsclite"
 	gopsutil "github.com/shirou/gopsutil/mem"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -205,7 +205,7 @@ var (
 	defaultSyncMode = ethconfig.Defaults.SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
-		Usage: `Blockchain sync mode ("fast", "full", "snap" or "light")`,
+		Usage: `Blockchain sync mode ("full")`,
 		Value: &defaultSyncMode,
 	}
 	GCModeFlag = cli.StringFlag{
