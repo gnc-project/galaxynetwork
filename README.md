@@ -64,21 +64,10 @@ http://chain-node.galaxynetwork.vip
 &NewLine;
 
 
-Official Golang implementation of the GalaxyNetWork protocol.
-
-[![API Reference](
-https://camo.githubusercontent.com/915b7be44ada53c290eb157634330494ebe3e30a/68747470733a2f2f676f646f632e6f72672f6769746875622e636f6d2f676f6c616e672f6764646f3f7374617475732e737667
-)](https://pkg.go.dev/github.com/gnc-project/galaxynetwork?tab=doc)
-[![Go Report Card](https://goreportcard.com/badge/github.com/gnc-project/galaxynetwork)](https://goreportcard.com/report/github.com/gnc-project/galaxynetwork)
-[![Travis](https://travis-ci.com/ethereum/go-ethereum.svg?branch=master)](https://travis-ci.com/ethereum/galaxynetwork)
-[![Discord](https://img.shields.io/badge/discord-join%20chat-blue.svg)](https://discord.gg/nthXNEv)
-
 Automated builds are available for stable releases and the unstable master branch. Binary
 archives are published at https://github.com/gnc-project/galaxynetwork.
 
 ## Building the source
-
-For prerequisites and detailed build instructions please read the [Installation Instructions](https://geth.ethereum.org/docs/install-and-build/installing-geth).
 
 Building `geth` requires both a Go (version 1.14 or later) and a C compiler. You can install
 them using your favourite package manager. Once the dependencies are installed, run
