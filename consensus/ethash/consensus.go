@@ -797,7 +797,7 @@ func CalculateLockedFunds(num *big.Int, rewardLock *big.Int,funds common.MinedBl
 	newFunds := common.MinedBlocks{}
 	for i:=int64(0); i < rewardc.MinSectorExpiration; i++{
 
-		vestEpoch = new(big.Int).Add(vestEpoch,big.NewInt(rewardc.DayBlock))
+		vestEpoch = new(big.Int).Add(vestEpoch,new(big.Int).SetUint64(rewardc.DayBlock))
 
 		if mb, ok := fundsMap[vestEpoch.Uint64()]; ok {
 			amount := new(big.Int).Add(mb.Amount,dayAmount)
