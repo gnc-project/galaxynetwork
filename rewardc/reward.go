@@ -16,13 +16,13 @@ const (
 	MinimumDifficulty      = uint64(20000000000000000) // The minimum that the difficulty may ever be.
 	GenesisNumber          = 0
 	PledgeNumber           = GenesisNumber + 100
-    DayBlock               =  10 // 24 * 60 * 60 / FutureBlockTime
-    Day60				   = 1	//Received in 60 days
+    DayBlock               = 24 * 60 * 60 / FutureBlockTime
+    Day60				   = 60	//Received in 60 days
 	GenesisTimestamp       = 1635317555
 	MinSectorExpiration    = 180
 	ChainID					= 37021
 	BaseCapacity			= 102	//GB
-	TotalCapacity			= 2 	// default 100PB
+	TotalCapacity			= 100 	// default 100PB
 	BasePB					= 1024 * 1024
 
 	StakingNum				= 50
