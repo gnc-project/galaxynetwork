@@ -10,12 +10,13 @@
    * Economic model upgraded
 
 ### public rpc/api
-http://chain-node.galaxynetwork.vip
+* http://chain-node.galaxynetwork.vip
 
 ### Notice
 * 1.The address showed to users shall keep the prefix with 'GNC';
 * 2.Before calling the GalaxyNetwork RPC interface, please replace the transfer address that users entering from prefix 'GNC' to '0x'.
 * 3.Keep the RPC/API same with Ethereum v1.10.8
+* 4.Block Number starts from 0
 
 ### Shown to users:
 ```js
