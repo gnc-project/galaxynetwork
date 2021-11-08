@@ -201,6 +201,7 @@ search:
 				}
 
 				//copy tmp to header
+				header = types.CopyHeader(header)
 				header.Time  = headerTmp.Time
 				header.Proof = headerTmp.Proof
 				header.Pid	 = headerTmp.Pid
