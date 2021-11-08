@@ -17,16 +17,14 @@
 package core
 
 import (
-	"github.com/gnc-project/galaxynetwork/consensus/ethash"
-	"math/big"
-	"sort"
-	"time"
-
 	"github.com/gnc-project/galaxynetwork/common"
 	"github.com/gnc-project/galaxynetwork/consensus"
+	"github.com/gnc-project/galaxynetwork/consensus/ethash"
 	"github.com/gnc-project/galaxynetwork/core/types"
 	"github.com/gnc-project/galaxynetwork/core/vm"
 	"github.com/gnc-project/galaxynetwork/rewardc"
+	"math/big"
+	"sort"
 )
 
 // ChainContext supports retrieving headers and consensus parameters from the
@@ -68,8 +66,8 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 		GetHash:              GetHashFn(header, chain),
 		Coinbase:             beneficiary,
 		BlockNumber:          new(big.Int).Set(header.Number),
-		Time:                 new(big.Int).SetInt64(time.Now().Unix()),
-		Difficulty:           new(big.Int).SetInt64(1000000000),
+		Time:                 new(big.Int).SetUint64(rewardc.GenesisTimestamp),
+		Difficulty:           new(big.Int).SetUint64(rewardc.GenesisDifficulty),
 		BaseFee:              baseFee,
 		GasLimit:             header.GasLimit,
 		NetCapacity:          header.ParentCapacity,
