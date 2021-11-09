@@ -791,20 +791,20 @@ func CalculateLockedFunds(num *big.Int, rewardLock *big.Int,funds common.MinedBl
 		fundsMap[vf.BlockNumber.Uint64()] = vf
 	}
 
-	vestEpoch := num
+	vestEpoch := num.Uint64()
 	dayAmount := new(big.Int).Div(rewardLock,big.NewInt(rewardc.MinSectorExpiration))
 
 	newFunds := common.MinedBlocks{}
 	for i:=int64(0); i < rewardc.MinSectorExpiration; i++{
 
-		vestEpoch = new(big.Int).Add(vestEpoch,new(big.Int).SetUint64(rewardc.DayBlock))
-
-		if mb, ok := fundsMap[vestEpoch.Uint64()]; ok {
+		vestEpoch = vestEpoch + rewardc.DayBlock
+		vestEpoch = vestEpoch -  (vestEpoch % rewardc.DayBlock)
+		if mb, ok := fundsMap[vestEpoch]; ok {
 			amount := new(big.Int).Add(mb.Amount,dayAmount)
-			newMb := &common.MinedBlock{BlockNumber: new(big.Int).SetUint64(vestEpoch.Uint64()),Amount: amount}
-			fundsMap[vestEpoch.Uint64()] = newMb
+			newMb := &common.MinedBlock{BlockNumber: new(big.Int).SetUint64(vestEpoch),Amount: amount}
+			fundsMap[vestEpoch] = newMb
 		}else {
-			fundsMap[vestEpoch.Uint64()] = &common.MinedBlock{BlockNumber: new(big.Int).SetUint64(vestEpoch.Uint64()),Amount: dayAmount}
+			fundsMap[vestEpoch] = &common.MinedBlock{BlockNumber: new(big.Int).SetUint64(vestEpoch),Amount: dayAmount}
 		}
 	}
 

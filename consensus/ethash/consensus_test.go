@@ -24,9 +24,12 @@ import (
 	"github.com/gnc-project/galaxynetwork/common/math"
 	"github.com/gnc-project/galaxynetwork/core/types"
 	"github.com/gnc-project/galaxynetwork/params"
+	"github.com/gnc-project/galaxynetwork/rewardc"
+	"github.com/shopspring/decimal"
 	"math/big"
 	"math/rand"
 	"testing"
+	"time"
 )
 
 type diffTest struct {
@@ -37,6 +40,16 @@ type diffTest struct {
 	CurrentDifficulty  *big.Int
 }
 
+func TestCalculateAmountUnlocked(t *testing.T) {
+	number := 900000
+	elapsed := 4800
+
+	b := number - ( number % elapsed )
+
+	fmt.Println(b)
+
+}
+
 func TestLockedRewardFromReward(t *testing.T)  {
 	r := big.NewInt(0).Mul(big.NewInt(600),big.NewInt(1e18))
 	a,b := LockedRewardFromReward(r)
@@ -45,19 +58,45 @@ func TestLockedRewardFromReward(t *testing.T)  {
 
 func TestCalculateLockedFunds(t *testing.T) {
 	funds := common.MinedBlocks{}
-	reawrd := new(big.Int).Mul(big.NewInt(180),big.NewInt(1e18))
 	amount := big.NewInt(0)
 	total := big.NewInt(0)
-	for i:=1; i<= 19;i++ {
+	availableTotal := big.NewInt(0)
+	for i:=1; i<= 1000000;i++ {
+		now := time.Now()
 
-		funds = CalculateLockedFunds(big.NewInt(int64(i)),reawrd,funds)
+		reward := rewardc.GetReward(uint64(i))
+		rewardLock, available := LockedRewardFromReward(new(big.Int).Mul(new(big.Int).Div(reward,big.NewInt(100)),rewardc.MineRewardProportion))
+
+		funds = CalculateLockedFunds(big.NewInt(int64(i)),rewardLock,funds)
 		amount,funds = CalculateAmountUnlocked(big.NewInt(int64(i)),funds)
+		end := time.Now().Sub(now)
 		lockedAmount,_ := CalculateAmountUnlocked(big.NewInt(math.MaxInt64),funds)
 
+		before := uint64(0)
+		for _,v := range funds {
+			if before == 0 {
+				before = v.BlockNumber.Uint64()
+				continue
+			}
+			if v.BlockNumber.Uint64() - before != rewardc.DayBlock {
+				panic(fmt.Errorf("---------------------not  number -----------number=%d  before=%d -------------------",v.BlockNumber.Uint64(),before))
+			}
+			before = v.BlockNumber.Uint64()
+		}
 
+		availableTotal = new(big.Int).Add(availableTotal,available)
 		total = new(big.Int).Add(total,amount)
-		fmt.Println("number",i,"amount",amount,"funds",len(funds),"total",total,"lockedAmount",lockedAmount)
-		fmt.Println("---------------------------------------------------------------------------------------------------------")
+
+		if i >=1000000 {
+			f,_ := json.Marshal(funds)
+			fmt.Println("funds---->",string(f))
+			fmt.Println("number",i,"25%",decimal.NewFromBigInt(availableTotal,0).Div(decimal.New(1,18)),"当前释放",decimal.NewFromBigInt(amount,0).Div(decimal.New(1,18)),"funds",len(funds),
+				"已释放",decimal.NewFromBigInt(total,0).Div(decimal.New(1,18)),
+				"未释放",decimal.NewFromBigInt(lockedAmount,0).Div(decimal.New(1,18)),
+				"elapsed",end)
+			fmt.Println("---------------------------------------------------------------------------------------------------------")
+		}
+
 	}
 }
 
