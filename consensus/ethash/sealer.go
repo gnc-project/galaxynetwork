@@ -172,7 +172,7 @@ search:
 				headerTmp := &types.Header{}
 				headerTmp.ParentHash = header.ParentHash
 				headerTmp.Number = workPoc.Number
-				headerTmp.Time = uint64(workPoc.Timestamp)
+				headerTmp.PocTime = uint64(workPoc.Timestamp)
 				headerTmp.Proof = workPoc.Proof
 				headerTmp.Pid  = workPoc.Pid
 				headerTmp.K   = uint64(workPoc.K)
@@ -202,7 +202,7 @@ search:
 
 				//copy tmp to header
 				header = types.CopyHeader(header)
-				header.Time  = headerTmp.Time
+				header.PocTime  = headerTmp.PocTime
 				header.Proof = headerTmp.Proof
 				header.Pid	 = headerTmp.Pid
 				header.K     = headerTmp.K

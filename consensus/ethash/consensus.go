@@ -666,18 +666,18 @@ func (ethhash *Ethash) verifySig(header *types.Header) error {
 
 func (ethhash *Ethash)verifyHeaderTimestamp(header,parent *types.Header) error {
 
-	if int64(header.Time) > time.Now().Unix() + 3 {
+	if int64(header.PocTime) > time.Now().Unix() + 3 {
 		log.Error("block timestamp of unix is too far in the future",
 			"allowed",      time.Now().Unix(),
-			"timestamp_unix", header.Time,
+			"timestamp_unix", header.PocTime,
 			"height",        header.Number,
 			"block",          header.Hash().Hex(),
 		)
 		return errors.New("block timestamp is too far in the future")
 	}
 
-	before := time.Unix(int64(parent.Time),0).Add(poc.PoCSlot * time.Second)
-	if int64(header.Time) < before.Unix() {
+	before := time.Unix(int64(parent.PocTime),0).Add(poc.PoCSlot * time.Second)
+	if int64(header.PocTime) < before.Unix() {
 		log.Error("block timestamp of unix is too near in the future","allowed")
 		return errors.New("block timestamp of unix is too near in the future")
 	}

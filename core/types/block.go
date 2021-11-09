@@ -93,6 +93,7 @@ type Header struct {
 	Challenge common.Hash 		`json:"challenge"        gencodec:"required"`
 	Proof     []byte 			`json:"proof"            gencodec:"required"`
 	Signed	  []byte			`json:"signed"           gencodec:"required"`
+	PocTime	  uint64			`json:"pocTime"          gencodec:"required"`
 
 	NetCapacity uint64         `json:"netCapacity"     gencodec:"required"`
 	ParentCapacity uint64	   `json:"parentCapacity"  gencodec:"required"`
@@ -111,6 +112,7 @@ type headerMarshaling struct {
 	GasLimit   hexutil.Uint64
 	GasUsed    hexutil.Uint64
 	Time       hexutil.Uint64
+	PocTime    hexutil.Uint64
 	Extra      hexutil.Bytes
 	BaseFee    *hexutil.Big
 	K          hexutil.Uint64

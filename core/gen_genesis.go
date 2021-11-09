@@ -32,6 +32,7 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 		ParentHash     common.Hash                                 `json:"parentHash"`
 		NetCapacity    math.HexOrDecimal64                         `json:"netCapacity"`
 		ParentCapacity math.HexOrDecimal64                         `json:"parentCapacity"`
+		PocTime        math.HexOrDecimal64                         `json:"pocTime"`
 		BaseFee        *math.HexOrDecimal256                       `json:"baseFeePerGas"`
 		Challenge      common.Hash                                 `json:"challenge"               gencodec:"required"`
 	}
@@ -55,6 +56,7 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 	enc.ParentHash = g.ParentHash
 	enc.NetCapacity = math.HexOrDecimal64(g.NetCapacity)
 	enc.ParentCapacity = math.HexOrDecimal64(g.ParentCapacity)
+	enc.PocTime = math.HexOrDecimal64(g.PocTime)
 	enc.BaseFee = (*math.HexOrDecimal256)(g.BaseFee)
 	enc.Challenge = g.Challenge
 	return json.Marshal(&enc)
@@ -77,6 +79,7 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 		ParentHash     *common.Hash                                `json:"parentHash"`
 		NetCapacity    *math.HexOrDecimal64                        `json:"netCapacity"`
 		ParentCapacity *math.HexOrDecimal64                        `json:"parentCapacity"`
+		PocTime        *math.HexOrDecimal64                        `json:"pocTime"`
 		BaseFee        *math.HexOrDecimal256                       `json:"baseFeePerGas"`
 		Challenge      *common.Hash                                `json:"challenge"               gencodec:"required"`
 	}
@@ -131,6 +134,9 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	}
 	if dec.ParentCapacity != nil {
 		g.ParentCapacity = uint64(*dec.ParentCapacity)
+	}
+	if dec.PocTime != nil {
+		g.PocTime = uint64(*dec.PocTime)
 	}
 	if dec.BaseFee != nil {
 		g.BaseFee = (*big.Int)(dec.BaseFee)

@@ -1499,6 +1499,7 @@ func RPCMarshalHeader(head *types.Header, engine consensus.Engine) map[string]in
 		"gasLimit":         hexutil.Uint64(head.GasLimit),
 		"gasUsed":          hexutil.Uint64(head.GasUsed),
 		"timestamp":        hexutil.Uint64(head.Time),
+		"pocTime":			hexutil.Uint64(head.PocTime),
 		"transactionsRoot": head.TxHash,
 		"receiptsRoot":     head.ReceiptHash,
 		"challenge":		head.Challenge,

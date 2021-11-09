@@ -13,9 +13,10 @@
 * http://chain-node.galaxynetwork.vip
 
 ### Notice
-* 1.Replace the old address prefix 'GNC' with '0x'
+* 1.Replace the old chain address prefix 'GNC' with '0x'
 * 2.Keep the RPC/API same with Ethereum v1.10.8
 * 3.Block Number starts from 0
+* 4.Block confirmations 32
 
 ### Shown to users:
 ```js

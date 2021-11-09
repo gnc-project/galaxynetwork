@@ -65,6 +65,7 @@ type Genesis struct {
 	ParentHash common.Hash `json:"parentHash"`
 	NetCapacity uint64   `json:"netCapacity"`
 	ParentCapacity uint64 `json:"parentCapacity"`
+	PocTime		uint64		`json:"pocTime"`
 	BaseFee    *big.Int    `json:"baseFeePerGas"`
 
 	Challenge common.Hash `json:"challenge"               gencodec:"required"`
@@ -98,6 +99,7 @@ type GenesisAccount struct {
 type genesisSpecMarshaling struct {
 	Nonce      math.HexOrDecimal64
 	Timestamp  math.HexOrDecimal64
+	PocTime	   math.HexOrDecimal64
 	ExtraData  hexutil.Bytes
 	GasLimit   math.HexOrDecimal64
 	GasUsed    math.HexOrDecimal64
@@ -295,6 +297,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 		Challenge: g.Challenge,
 		NetCapacity: g.NetCapacity,
 		ParentCapacity: g.ParentCapacity,
+		PocTime: g.PocTime,
 	}
 	if g.GasLimit == 0 {
 		head.GasLimit = params.GenesisGasLimit
@@ -375,6 +378,7 @@ func DefaultGenesisBlock() *Genesis {
 		Alloc:      decodePrealloc(mainnetAllocData),
 		NetCapacity:  0,
 		ParentCapacity: 0,
+		PocTime: rewardc.GenesisTimestamp,
 		//poc
 		Challenge: common.HexToHash("0x66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"),
 	}
