@@ -124,7 +124,7 @@ func (b *EthAPIBackend) MinerInfo(ctx context.Context) (*poc.MinerInfo, error) {
 	return &poc.MinerInfo{
 		Number:     	header.Number.Uint64() + 1,
 		Challenge:  	challenge.Hex(),
-		LastBlockTime: 	header.Time,
+		LastBlockTime: 	header.PocTime,
 		Difficulty: 	header.Difficulty,
 	}, nil
 }

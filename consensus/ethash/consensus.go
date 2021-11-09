@@ -343,8 +343,8 @@ func (ethash *Ethash) CalcDifficulty(header, parent *types.Header) *big.Int {
 // given the parent block's time and difficulty.
 func CalcDifficulty(header, parent *types.Header) *big.Int {
 	// Ensure diff
-	lastTime := time.Unix(int64(parent.Time),0)
-	blockTime := time.Unix(int64(header.Time),0)
+	lastTime := time.Unix(int64(parent.PocTime),0)
+	blockTime := time.Unix(int64(header.PocTime),0)
 	return difficulty.CalcNextRequiredDifficulty(lastTime,parent.Difficulty,blockTime)
 }
 
@@ -700,7 +700,7 @@ func (ethhash *Ethash)verifyProofOfCapacity(header *types.Header) error {
 		return errors.New("block difficulty is not the expected value")
 	}
 
-	slot := header.Time / poc.PoCSlot
+	slot := header.PocTime / poc.PoCSlot
 	quality,err := poc.VerifiedQuality(header.Proof,header.Pid,header.Challenge,slot,header.Number.Uint64(),header.K)
 	if err != nil {
 		return err

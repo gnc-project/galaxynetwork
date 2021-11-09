@@ -41,7 +41,8 @@ func TestClient_BlockByNumber(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("hash---->",block.Hash())
+	j, _ := block.Header().MarshalJSON()
+	fmt.Println("hash---->",string(j))
 }
 
 func TestClient_BalanceAt(t *testing.T) {
