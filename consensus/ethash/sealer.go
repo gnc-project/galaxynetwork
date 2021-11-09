@@ -192,7 +192,7 @@ search:
 				}
 
 				log.Info("sealer","number",headerTmp.Number,"hash",headerTmp.Hash().Hex(),"challenge", headerTmp.Challenge.Hex(),"proof",hex.EncodeToString(headerTmp.Proof),
-					"difficulty",headerTmp.Difficulty,"pid",headerTmp.Pid.Hex(),"time",headerTmp.Time,"k",headerTmp.K)
+					"difficulty",headerTmp.Difficulty,"pid",headerTmp.Pid.Hex(),"pocTime",headerTmp.PocTime,"k",headerTmp.K)
 
 				if err := ethash.verifyPoc(headerTmp,chain.CurrentHeader()); err != nil {
 					log.Error("sealer","err",err.Error())
