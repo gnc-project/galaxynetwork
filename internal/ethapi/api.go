@@ -830,9 +830,9 @@ func (s *PublicBlockChainAPI) GetReward(ctx context.Context,blockNrOrHash rpc.Bl
 	}
 
 	reward := rewardc.GetReward(number)
-	_, available := ethash.LockedRewardFromReward(new(big.Int).Mul(new(big.Int).Div(reward,big.NewInt(100)),rewardc.MineRewardProportion))
+	//_, available := ethash.LockedRewardFromReward(new(big.Int).Mul(new(big.Int).Div(reward,big.NewInt(100)),rewardc.MineRewardProportion))
 
-	return (*hexutil.Big)(available), nil
+	return (*hexutil.Big)(reward), nil
 }
 
 func (s *PublicBlockChainAPI) GetAmountUnlocked(ctx context.Context,address common.Address,blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
