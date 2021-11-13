@@ -848,7 +848,6 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	case cfg.BootstrapNodes != nil:
 		return // already set, don't apply defaults.
 	}
-
 	cfg.BootstrapNodes = make([]*enode.Node, 0, len(urls))
 	for _, url := range urls {
 		if url != "" {

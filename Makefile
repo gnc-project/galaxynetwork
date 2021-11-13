@@ -17,7 +17,6 @@ geth:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/geth\" to launch geth."
 
-
 gnc:
 	$(GORUN) build/ci.go install ./cmd/geth
 	@echo "Done building."
@@ -29,7 +28,7 @@ gnc1:
 	$(GORUN) build/ci.go install  ./cmd/geth
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/geth\" to launch geth."
-	@./build/bin/geth --datadir=/nvme/data/geth1/ --syncmode 'light' --cache 1024 --rpc  --http.addr='0.0.0.0' --http.addr='eth,web3,net,debug' --http.addr=8545 --ethash.dagdir ./dag --gcmode archive --snapshot
+	@./build/bin/geth --datadir=/nvme/data/geth1/ --verbosity 5  --syncmode 'light' --cache 1024 --rpc  --http.addr='0.0.0.0' --http.addr='eth,web3,net,debug' --http.addr=8545 --ethash.dagdir ./dag --gcmode archive --snapshot
 
 all:
 	$(GORUN) build/ci.go install

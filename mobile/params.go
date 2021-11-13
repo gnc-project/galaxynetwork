@@ -20,7 +20,6 @@ package geth
 
 import (
 	"encoding/json"
-
 	"github.com/gnc-project/galaxynetwork/core"
 	"github.com/gnc-project/galaxynetwork/p2p/enode"
 	"github.com/gnc-project/galaxynetwork/params"

@@ -12,13 +12,13 @@ const (
 	subsidyHalvingInterval = BlockTotal * 2
 	Blocks				   = subsidyHalvingInterval - 576000
 
-	GenesisDifficulty      = uint64(20000000000000000) // Difficulty of the Genesis block.
-	MinimumDifficulty      = uint64(20000000000000000) // The minimum that the difficulty may ever be.
+	GenesisDifficulty      = uint64(40000000000000000) // Difficulty of the Genesis block.
+	MinimumDifficulty      = uint64(40000000000000000) // The minimum that the difficulty may ever be.
 	GenesisNumber          = 0
 	PledgeNumber           = GenesisNumber + 100
     DayBlock               = 24 * 60 * 60 / FutureBlockTime
     Day60				   = 60	//Received in 60 days
-	GenesisTimestamp       = 1604892467
+	GenesisTimestamp       = 1636782709
 	MinSectorExpiration    = 180
 	ChainID					= 37021
 	BaseCapacity			= 102	//GB
