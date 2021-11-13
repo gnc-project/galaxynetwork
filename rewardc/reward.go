@@ -18,7 +18,7 @@ const (
 	PledgeNumber           = GenesisNumber + 100
     DayBlock               = 24 * 60 * 60 / FutureBlockTime
     Day60				   = 60	//Received in 60 days
-	GenesisTimestamp       = 1636782709
+	GenesisTimestamp       = 1636794610
 	MinSectorExpiration    = 180
 	ChainID					= 37021
 	BaseCapacity			= 102	//GB

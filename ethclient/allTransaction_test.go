@@ -14,7 +14,6 @@ import (
 
 var (
 	pri		=	"24ccbb7a360ab4c728e1463db0a0d5b67c7923f91349520e6f89a10fb1e9933e"
-	pri2	=	"2399a673a048b11de73c9f248168c6e90cf02ab39cd6478bfbdccff6bee3f753"
 	from   	= 	"0x461618Dc4480246eBAabb48169BC535e03e9f86E"
 )
 
