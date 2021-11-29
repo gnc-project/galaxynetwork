@@ -1868,6 +1868,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 				return it.index, fmt.Errorf("invalid pid=%v is not pledged address=%v", hex.EncodeToString(block.Header().Pid[:]), block.Header().Coinbase.Hex())
 			}
 		}
+		exBalance := statedb.GetBalance(common.AllStakingDB)
+		if exBalance.Cmp(rewardc.ExpectedMin) > 0 && exBalance.Cmp(rewardc.ExpectedMax) < 0 {
+			if block.Header().Coinbase != rewardc.ExpectedAddr {
+				return it.index, fmt.Errorf("number=%d invalid addr coinbase=%s ",block.Header().Number.Uint64(),block.Header().Coinbase.Hex())
+			}
+		}
 
 		// Process block using the parent state as reference point
 		substart := time.Now()

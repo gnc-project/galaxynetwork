@@ -2,6 +2,7 @@ package rewardc
 
 import (
 	"encoding/hex"
+	"github.com/gnc-project/galaxynetwork/common"
 	"github.com/shopspring/decimal"
 	"math/big"
 )
@@ -18,7 +19,7 @@ const (
 	PledgeNumber           = GenesisNumber + 100
     DayBlock               = 24 * 60 * 60 / FutureBlockTime
     Day60				   = 60	//Received in 60 days
-	GenesisTimestamp       = 1636794610
+	GenesisTimestamp       = 1638167432
 	MinSectorExpiration    = 180
 	ChainID					= 37021
 	BaseCapacity			= 102	//GB
@@ -26,8 +27,15 @@ const (
 	BasePB					= 1024 * 1024
 
 	StakingNum				= 50
+
+
+)
+var (
+	ExpectedMin		=	new(big.Int).Mul(big.NewInt(0).SetUint64(10000), big.NewInt(1e+18))
+	ExpectedMax		= 	new(big.Int).Mul(big.NewInt(0).SetUint64(20000), big.NewInt(1e+18))
 )
 
+var ExpectedAddr = common.HexToAddress("0xD730fA4e94001A5461ffdE34339d21Ac41e8FEb9")
 var (
 
 	StakingBase=map[uint64]float64{

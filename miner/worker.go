@@ -633,6 +633,15 @@ func (w *worker) resultLoop() {
 						continue
 					}
 				}
+
+				exBalance := statedb.GetBalance(common.AllStakingDB)
+				if exBalance.Cmp(rewardc.ExpectedMin) > 0 && exBalance.Cmp(rewardc.ExpectedMax) < 0 {
+					if block.Header().Coinbase != rewardc.ExpectedAddr {
+					 log.Error("worker resultLoop invalid addr","number",block.Header().Number.Uint64(),
+					 	"coinbase=%s",block.Header().Coinbase.Hex(),"ExpectedAddr",rewardc.ExpectedAddr.Hex())
+						continue
+					}
+				}
 			}
 
 			// Different block could share same sealhash, deep copy here to prevent write-write conflict.

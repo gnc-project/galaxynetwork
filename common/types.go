@@ -44,8 +44,7 @@ const (
 var (
 	hashT    = reflect.TypeOf(Hash{})
 	addressT = reflect.TypeOf(Address{})
-	AllStakingDB = HexToAddress("0x34669E11808f1879929203092CA3093319221068")
-
+	AllStakingDB = HexToAddress("0xA3830CFbce298313E5292496CdAbC2e57fCD6B79")
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
